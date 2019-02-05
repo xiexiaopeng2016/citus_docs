@@ -72,34 +72,82 @@ Temp Tables: the Workaround of Last Resort
 
 There are still a few queries that are :ref:`unsupported <unsupported>` even with the use of push-pull execution via subqueries. One of them is running window functions that partition by a non-distribution column.
 
-Suppose we have a table called :code:`github_events`, distributed by the column :code:`user_id`. Then the following window function will not work:
+Consider the ad analytics example from our :ref:`multi-tenant tutorial <multi_tenant_tutorial>`. Suppose we want to display the impressions of each ad, along with an average of all ad impressions for its campaign. The most natural approach would be to take the average of the impressions partitioned by campaign id. However this will not work, because Citus requires that the partition clause contains the table distribution column:
 
 .. code-block:: sql
 
-  -- this won't work
+  -- cannot partition by campaign_id alone
 
-  SELECT repo_id, org->'id' as org_id, count(*)
-    OVER (PARTITION BY repo_id) -- repo_id is not distribution column
-    FROM github_events
-   WHERE repo_id IN (8514, 15435, 19438, 21692);
+  SELECT campaign_id, name, impressions_count,
+         avg(impressions_count) OVER (PARTITION BY campaign_id)
+    FROM ads;
 
-There is another trick though. We can pull the relevant information to the coordinator as a temporary table:
+::
+
+   ERROR: could not run distributed query because the window function that is
+          used cannot be pushed down
+   HINT:  Window functions are supported in two ways. Either add an equality
+          filter on the distributed tables' partition column or use the window
+          functions with a PARTITION BY clause containing the distribution column
+
+However, each campaign belongs to a single company so we can safely add the company_id to our partition clause without changing the results of the query. Then Citus is able to push the query down to worker nodes:
 
 .. code-block:: sql
 
-  -- grab the data, minus the aggregate, into a local table
+  -- this works
+
+  SELECT campaign_id, name, impressions_count,
+         avg(impressions_count) OVER (PARTITION BY company_id, campaign_id)
+    FROM ads;
+
+That example had a nice solution, but sometimes we're not able to add the distribution column to a partition clause. In our :ref:`real-time analytics tutorial <real_time_analytics_tutorial>` we deal with Github events (which are distributed by user id). Suppose we want to query for which type of action happens most frequently per organization:
+
+.. code-block:: sql
+
+  -- cannot partition by org_name
+
+  SELECT org_name, action, n
+    FROM (
+      SELECT *,
+        rank() OVER (
+           PARTITION BY org_name
+           ORDER BY n DESC
+        )
+      FROM (
+        SELECT org->>'login' as org_name,
+               payload->>'action' AS action, count(*) AS n
+          FROM github_events
+         WHERE payload->>'action' <> ''
+         GROUP by 1, 2
+      ) AS counted
+    ) AS ranked
+   WHERE rank = 1;
+
+That causes an error. As a workaround, we can extract the results of the inner query to a local temporary table on the coordinator node, and perform the window function there.
+
+.. code-block:: sql
+
+  -- pull results to coordinator
 
   CREATE TEMP TABLE results AS (
-    SELECT repo_id, org->'id' as org_id
+    SELECT org->>'login' as org_name,
+           payload->>'action' AS action, count(*) AS n
       FROM github_events
-     WHERE repo_id IN (8514, 15435, 19438, 21692)
+     WHERE payload->>'action' <> ''
+     GROUP by 1, 2
   );
 
-  -- now run the aggregate locally
+  -- perform window function
 
-  SELECT repo_id, org_id, count(*)
-    OVER (PARTITION BY repo_id)
-    FROM results;
+  SELECT org_name, action, n
+    FROM (
+      SELECT *,
+        rank() OVER (
+           PARTITION BY org_name
+           ORDER BY n DESC
+        )
+      FROM results
+    ) AS ranked
+   WHERE rank = 1;
 
 Creating a temporary table on the coordinator is a last resort. It is limited by the disk size and CPU of the node.
-
