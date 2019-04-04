@@ -44,6 +44,12 @@ Creating tables
 
 To start, you can first connect to the Citus coordinator using psql.
 
+**If you are using native Postgres**, such as that installed in our Single-Machine Cluster guide, the coordinator node will be running on port 9700.
+
+.. code-block:: bash
+
+    psql -p 9700
+
 **If you are using Citus Cloud**, you can connect by specifying the connection string (URL in the formation details):
 
 .. code-block:: bash
