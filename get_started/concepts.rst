@@ -1,80 +1,79 @@
 .. _citus_concepts:
 
-Concepts
-########
+概念
+####
 
 .. _distributed_arch:
 
-Nodes
-=====
+节点
+====
 
-Citus is a PostgreSQL `extension <https://www.postgresql.org/docs/current/static/external-extensions.html>`_ that allows commodity database servers (called *nodes*) to coordinate with one another in a "shared nothing" architecture. The nodes form a *cluster* that allows PostgreSQL to hold more data and use more CPU cores than would be possible on a single computer. This architecture also allows the database to scale by simply adding more nodes to the cluster.
+Citus是PostgreSQL `扩展 <https://www.postgresql.org/docs/current/static/external-extensions.html>`_ ，允许商品数据库服务器（称为节点）在“无共享”架构中相互协调。节点形成一个集群，允许PostgreSQL保存更多数据并使用比单台计算机更多的CPU核心。此体系结构还允许通过简单地向群集添加更多节点来扩展数据库。
 
-Coordinator and Workers
------------------------
+协调员和工作者
+-------------
 
-Every cluster has one special node called the *coordinator* (the others are known as workers). Applications send their queries to the coordinator node which relays it to the relevant workers and accumulates the results.
+每个集群都有一个称为协调器的特殊节点（其他节点称为工作者）。应用程序将其查询发送到协调器节点，该节点将其中继到相关工作人员并累积结果。
 
-For each query, the coordinator either *routes* it to a single worker node, or *parallelizes* it across several depending on whether the required data lives on a single node or multiple.  The coordinator knows how to do this by consulting its metadata tables. These Citus-specific tables track the DNS names and health of worker nodes, and the distribution of data across nodes. For more information, see our :ref:`metadata_tables`.
+对于每个查询，协调器将其路由到单个工作节点，或者将其并行化，具体取决于所需数据是在单个节点还是多个节点上。协调员通过查阅其元数据表知道如何执行此操作。这些特定于Citus的表跟踪工作节点的DNS名称和运行状况，以及跨节点的数据分布。有关更多信息，请参阅我们的:ref:`metadata_tables`.。
 
 .. note::
 
-   :ref:`mx` removes the need to send all queries through the coordinator node. With MX, users can send queries directly to any worker node, which allows both reads and writes to be scaled even more.
+   :ref:`mx` 无需通过协调器节点发送所有查询。使用MX，用户可以直接向任何工作节点发送查询，从而可以进行更多的读取和写入。
 
-Distributed Data
-================
+分布式数据
+=========
 
 .. _table_types:
 
-Table Types
------------
+表类型
+------
 
-There are three types of tables in a Citus cluster, each used for different purposes.
+Citus群集中有三种类型的表，每种表用于不同的目的。
 
-Type 1: Distributed Tables
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+类型1：分布式表
+~~~~~~~~~~~~~~
 
-The first type, and most common, is *distributed* tables. These appear to be normal tables to SQL statements, but are horizontally *partitioned* across worker nodes.
+第一种类型，也是最常见的是分布式表。这些似乎是SQL语句的正常表，但是跨工作节点进行水平分区。
 
 .. image:: ../images/diagram-parallel-select.png
 
-Here the rows of ``table`` are stored in tables ``table_1001``, ``table_1002`` etc on the workers. The component worker tables are called *shards*.
+这里 ``table``的行存储在工作节点上的 ``table_1001``, ``table_1002`` 等表中. 组件工作表称为 *分片*.
 
-Citus runs not only SQL but DDL statements throughout a cluster, so changing the schema of a distributed table cascades to update all the table's shards across workers. 
+Citus不仅在整个集群中运行SQL而且还运行DDL语句，因此更改分布式表的模式以级联更新工作者中所有表的分片。
 
-To learn how to create a distributed table, see :ref:`ddl`.
+要了解如何创建分布式表，请参阅 :ref:`ddl`.
 
 .. _dist_column:
 
-Distribution Column
-!!!!!!!!!!!!!!!!!!!
+分布列
+!!!!!!
 
-Citus uses algorithmic sharding to assign rows to shards. This means the assignment is made deterministically -- in our case based on the value of a particular table column called the *distribution column.* The cluster administrator must designate this column when distributing a table. Making the right choice is important for performance and functionality, as described in the general topic of :ref:`Distributed Data Modeling <distributed_data_modeling>`.
+Citus使用分片算法将行分配给分片。这意味着赋值是确定性的 - 在我们的例子中，基于称为*分布列.*的特定表列的值。群集管理员必须在分布表时指定此列。正如在主题:ref:`分布式数据建模 <distributed_data_modeling>`中所述，做出正确的选择对于性能和功能非常重要。
 
-Type 2: Reference Tables
-~~~~~~~~~~~~~~~~~~~~~~~~
+类型2：引用表
+~~~~~~~~~~~~
 
-A reference table is a type of distributed table whose entire contents are concentrated into a single shard which is replicated on every worker. Thus queries on any worker can access the reference information locally, without the network overhead of requesting rows from another node. Reference tables have no distribution column because there is no need to distinguish separate shards per row.
+引用表是一种分布式表，其整个内容集中在一个分片中，该分片在每个工作者上复制。因此，对任何工作者的查询都可以在本地访问引用信息，而不会产生从另一个节点请求行的网络开销。引用表没有分发列，因为不需要区分每行的单独分片。
 
-Reference tables are typically small, and are used to store data that is relevant to queries running on any worker node. For example, enumerated values like order statuses, or product categories.
+引用表通常很小，用于存储与在任何工作者节点上运行的查询相关的数据。例如，枚举值，如订单状态或产品类别。
 
-When interacting with a reference table we automatically perform two-phase commits (`2PC <https://en.wikipedia.org/wiki/Two-phase_commit_protocol>`_) on transactions. This means that Citus makes sure your data is always in a consistent state, regardless of whether you are writing, modifying, or deleting it.
+与引用表交互时，我们会自动对事务执行两阶段提交(`2PC <https://en.wikipedia.org/wiki/Two-phase_commit_protocol>`_)。这意味着，无论您是在写入，修改还是删除数据，Citus都会确保您的数据始终处于一致状态。
 
-The :ref:`reference_tables` section talks more about these tables and how to create them.
+该 :ref:`reference_tables` 部分更多地谈论这些表和如何创建它们。
 
-Type 3: Local Tables
-~~~~~~~~~~~~~~~~~~~~
+类型3：本地表
+~~~~~~~~~~~~
+当你使用Citus时，连接并与之交互的协调器节点是安装了Citus扩展的常规PostgreSQL数据库。因此，您可以创建普通表并选择不对它们进行分片。这对于不参与连接查询的小型管理表非常有用。一个例子是用户表，用于应用程序登录和身份验证
 
-When you use Citus, the coordinator node you connect to and interact with is a regular PostgreSQL database with the Citus extension installed. Thus you can create ordinary tables and choose not to shard them. This is useful for small administrative tables that don't participate in join queries. An example would be users table for application login and authentication.
+创建标准的PostgreSQL表非常简单，因为它是默认的。这是运行CREATE TABLE时得到的结果。在几乎每个Citus部署中，我们都看到标准的PostgreSQL表与分布式表和引用表共存。实际上，如前所述，Citus本身使用本地表来保存群集元数据。
 
-Creating standard PostgreSQL tables is easy because it's the default. It’s what you get when you run CREATE TABLE. In almost every Citus deployment we see standard PostgreSQL tables co-existing with distributed and reference tables. Indeed, Citus itself uses local tables to hold cluster metadata, as mentioned earlier.
+分片
+----
 
-Shards
-------
+上一节将分片描述为在工作节点内的较小表中包含分布式表的行的子集。本节将详细介绍技术细节。
 
-The previous section described a shard as containing a subset of the rows of a distributed table in a smaller table within a worker node. This section gets more into the technical details.
-
-The :ref:`pg_dist_shard <pg_dist_shard>` metadata table on the coordinator contains a row for each shard of each distributed table in the system. The row matches a shardid with a range of integers in a hash space (shardminvalue, shardmaxvalue):
+在协调器元数据表 :ref:`pg_dist_shard <pg_dist_shard>` 内包含一行, 定义系统中的每个分布表的每个分片。该行在散列空间（shardminvalue，shardmaxvalue）中匹配带有一系列整数的shardid：
 
 .. code-block:: sql
 
@@ -87,14 +86,17 @@ The :ref:`pg_dist_shard <pg_dist_shard>` metadata table on the coordinator conta
      github_events |  102029 | t            | 671088640     | 805306367
      (4 rows)
 
-If the coordinator node wants to determine which shard holds a row of ``github_events``, it hashes the value of the distribution column in the row, and checks which shard's range contains the hashed value. (The ranges are defined so that the image of the hash function is their disjoint union.)
+如果协调器节点想要确定哪一个分片包含一行``github_events``，则它会散列该行中分发列的值，并检查哪个分片的范围包含散列值。（定义范围使得散列函数的图像是它们的不相交联合。）
 
-Shard Placements
-~~~~~~~~~~~~~~~~
+分片位置
+~~~~~~~
 
-Suppose that shard 102027 is associated with the row in question. This means the row should be read or written to a table called ``github_events_102027`` in one of the workers. Which worker? That is determined entirely by the metadata tables, and the mapping of shard to worker is known as the shard *placement*.
+假设分片102027与所讨论的行关联。这意味着应该将行读取或写入某个工作者节点上被称为``github_events_102027`的表中。哪个工作者节点？这完全由元数据表决定，并且分片到工作者节点的映射称为*分片位置*。
 
-Joining some :ref:`metadata tables <metadata_tables>` gives us the answer. These are the types of lookups that the coordinator does to route queries. It rewrites queries into fragments that refer to the specific tables like ``github_events_102027``, and runs those fragments on the appropriate workers.
+结合一些 :ref:`元数据表 <metadata_tables>` 给了我们答案。这些是协调器用于路由查询的查找类型。它将查询重写为引用特定的表, 比如``github_events_102027``的片段，并在适当的worker上运行这些片段。
+
+Joining some :ref:`metadata tables <metadata_tables>` gives us the answer. These are the types of lookups that the coordinator does to route queries.
+It rewrites queries into fragments that refer to the specific tables like ``github_events_102027``, and runs those fragments on the appropriate workers.
 
 .. code-block:: sql
 
@@ -116,24 +118,24 @@ Joining some :ref:`metadata tables <metadata_tables>` gives us the answer. These
   │  102027 │ localhost │     5433 │
   └─────────┴───────────┴──────────┘
 
-In our example of ``github_events`` there were four shards. The number of shards is configurable per table at the time of its distribution across the cluster. The best choice of shard count depends on your use case, see :ref:`prod_shard_count`.
+在我们的例子中``github_events``有四个分片。每个表在跨集群分发时可以配置分片数量。分片数目的最佳选择取决于您的用例，请参阅 :ref:`prod_shard_count`。
 
-Finally note that Citus allows shards to be replicated for protection against data loss. There are two replication "modes:" Citus replication and streaming replication. The former creates extra backup shard placements and runs queries against all of them that update any of them. The latter is more efficient and utilizes PostgreSQL's streaming replication to back up the entire database of each node to a follower database. This is transparent and does not require the involvement of Citus metadata tables.
+最后请注意，Citus允许复制分片以防止数据丢失。有两种复制“模式：”Citus复制和流复制。前者创建额外的备份分片位置，并对更新其中任何一个分片的所有分片运行查询。后者更有效，并利用PostgreSQL的流复制将每个节点的整个数据库备份到跟随者数据库。这是透明的，不需要Citus元数据表的参与。
 
 Co-Location
 -----------
 
-Since shards and their replicas can be placed on nodes as desired, it makes sense to place shards containing related rows of related tables together on the same nodes. That way join queries between them can avoid sending as much information over the network, and can be performed inside a single Citus node.
+由于可以根据需要将分片及其副本放置在节点上，因此将包含关联表的相关行的分片放在同一节点上是有意义的。这样，它们之间的连接查询可以避免通过网络发送过多的信息，并且可以在单个Citus节点内执行。
 
-One example is a database with stores, products, and purchases. If all three tables contain -- and are distributed by -- a store_id column, then all queries restricted to a single store can run efficiently on a single worker node. This is true even when the queries involve any combination of these tables.
+一个例子是具有商店，产品和购买的数据库。如果所有三个表都包含 -- 并且由 -- store_id列分发，则限制为单个存储的所有查询都可以在单个工作节点上高效运行。即使查询涉及这些表的任何组合，也是如此。
 
-For a full explanation and examples of this concept, see :ref:`colocation`.
+有关此概念的完整说明和示例，请参阅 :ref:`colocation`。
 
-Parallelism
------------
+并行性
+------
 
-Spreading queries across multiple machines allows more queries to run at once, and allows processing speed to scale by adding new machines to the cluster. Additionally splitting a single query into fragments as described in the previous section boosts the processing power devoted to it. The latter situation achieves the greatest *parallelism,* meaning utilization of CPU cores.
+跨多台计算机分布查询允许一次运行更多查询，并允许通过向群集添加新机器来扩展处理速度。此外，如上一节所述，将单个查询拆分为片段可以提高处理能力。后一种情况实现了最大的并行性，即CPU核心的利用率。
 
-Queries reading or affecting shards spread evenly across many nodes are able to run at "real-time" speed. Note that the results of the query still need to pass back through the coordinator node, so the speedup is most apparent when the final results are compact, such as aggregate functions like counting and descriptive statistics.
+读取或影响在多个节点上均匀分布的分片的查询能够以“实时”速度运行。请注意，查询的结果仍然需要通过协调器节点传回，因此当最终结果是紧凑的时，加速最明显，例如计数和描述性统计等聚合函数。
 
-:ref:`citus_query_processing` explains more about how queries are broken into fragments and how their execution is managed.
+:ref:`citus_query_processing` 解释了有关如何将查询分解为片段以及如何管理其执行的更多信息。

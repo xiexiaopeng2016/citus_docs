@@ -81,25 +81,25 @@ Citus的优势在于它能够并行化查询执行并与集群中的工作数据
 * 随着数据集的增长，保持亚秒级响应
 * 实时分析新事件和新数据
 * 并行化SQL查询
-* Scale out without giving up SQL
-* Maintain performance under high concurrency
-* Fast responses to dashboard queries
-* Use one database, not a patchwork
-* Rich PostgreSQL data types and extensions
+* 向外扩展而不放弃SQL
+* 在高并发性下保持性能
+* 快速响应仪表板查询
+* 使用一个数据库，而不是拼凑而成
+* 丰富的PostgreSQL数据类型和扩展
 
-Considerations for Use
-----------------------
+使用注意事项
+-----------
 
-Citus extends PostgreSQL with distributed functionality, but it is not a drop-in replacement that scales out all workloads. A performant Citus cluster involves thinking about the data model, tooling, and choice of SQL features used.
+Citus使用分布式功能扩展了PostgreSQL，但它并不是扩展所有工作负载的直接替代品。一个高性能的Citus集群涉及到数据模型，工具和所用SQL特性的选择。
 
-A good way to think about tools and SQL features is the following: if your workload aligns with use-cases described here and you happen to run into an unsupported tool or query, then there’s usually a good workaround.
+考虑工具和SQL特性的一种好方法如下：如果您的工作负载与此处描述的用例一致，并且您碰巧遇到了不受支持的工具或查询，那么这些通常会是一个很好的解决方法。
 
-When Citus is Inappropriate
----------------------------
+当Citus不合适时
+--------------
 
-Some workloads don't need a powerful distributed database, while others require a large flow of information between worker nodes. In the first case Citus is unnecessary, and in the second not generally performant. Here are some examples:
+某些工作负载不需要功能强大的分布式数据库，而其他工作负载则需要工作节点之间的大量信息流。在第一种情况下，Citus是不必要的，而在第二种情况下，通常不具备性能。这里有些例子：
 
-* When single-node Postgres can support your application and you do not expect to grow
-* Offline analytics, without the need for real-time ingest nor real-time queries
-* Analytics apps that do not need to support a large number of concurrent users
-* Queries that return data-heavy ETL results rather than summaries
+* 当单节点Postgres能够支持您的应用程序并且您不希望它增长时
+* 离线分析，无需实时摄取或实时查询
+* 分析应用程序不需要支持大量并发用户
+* 返回数据量大的ETL结果而非摘要的查询

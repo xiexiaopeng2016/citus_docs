@@ -1,46 +1,46 @@
 .. _app_type:
 
-Determining Application Type
-============================
+确定应用程序类型
+===============
 
-Running efficient queries on a Citus cluster requires that data be properly distributed across machines. This varies by the type of application and its query patterns.
+在Citus群集上运行高效查询要求数据在机器之间正确分布。这取决于应用程序的类型及其查询模式。
 
-There are broadly two kinds of applications that work very well on Citus. The first step in data modeling is to identify which of them more closely resembles your application.
+大致有两种应用程序在Citus上运行良好。数据建模的第一步是确定哪种更接近您的应用程序。
 
-At a Glance
------------
+概览
+----
 
 +----------------------------------------------------------+-------------------------------------------------------+
-| Multi-Tenant Applications                                | Real-Time Applications                                |
+| 多租户应用程序                                            | 实时应用程序                                           |
 +==========================================================+=======================================================+
-| Sometimes dozens or hundreds of tables in schema         | Small number of tables                                |
+| 架构中有时会有数十或数百个表                               | 少量的表                                              |
 +----------------------------------------------------------+-------------------------------------------------------+
-| Queries relating to one tenant (company/store) at a time | Relatively simple analytics queries with aggregations |
+| 一次查询与一个租户（公司/商店）有关的查询                   | 具有聚合的相对简单的分析查询                           |
 +----------------------------------------------------------+-------------------------------------------------------+
-| OLTP workloads for serving web clients                   | High ingest volume of mostly immutable data           |
+| 用于服务Web客户端的OLTP工作负载                            | 大量不可变数据的高摄取量                               |
 +----------------------------------------------------------+-------------------------------------------------------+
-| OLAP workloads that serve per-tenant analytical queries  | Often centering around big table of events            |
+| 为每个租户分析查询提供服务的OLAP工作负载                   | 通常以大型活动为中心                                    |
 +----------------------------------------------------------+-------------------------------------------------------+
 
-Examples and Characteristics
-----------------------------
+示例和特征
+---------
 
-**Multi-Tenant Application**
+**多租户应用程序**
 
-  These are typically SaaS applications that serve other companies, accounts, or organizations. Most SaaS applications are inherently relational. They have a natural dimension on which to distribute data across nodes: just shard by tenant_id.
+  这些通常是为其他公司，帐户或组织提供服务的SaaS应用程序。大多数SaaS应用程序本质上都是关系型的。它们具有在节点之间分配数据的自然维度：只需通过tenant_id进行分片
 
-  Citus enables you to scale out your database to millions of tenants without having to re-architect your application. You can keep the relational semantics you need, like joins, foreign key constraints, transactions, ACID, and consistency.
+  Citus使您可以将数据库扩展到数百万租户，而无需重新构建应用程序。您可以保留所需的关系语义，例如连接，外键约束，事务，ACID和一致性。
 
-  * **Examples**: Websites which host store-fronts for other businesses, such as a digital marketing solution, or a sales automation tool.
-  * **Characteristics**: Queries relating to a single tenant rather than joining information across tenants. This includes OLTP workloads for serving web clients, and OLAP workloads that serve per-tenant analytical queries. Having dozens or hundreds of tables in your database schema is also an indicator for the multi-tenant data model.
+  * **示例**: 为其他业务托管商店前端的网站，例如数字营销解决方案或销售自动化工具。
+  * **特征**: 与单个租户相关的查询，而不是在租户之间加入信息。这包括用于服务Web客户端的OLTP工作负载，以及为每个租户分析查询提供服务的OLAP工作负载。数据库模式中有数十个或数百个表也是多租户数据模型的指标。
 
-  Scaling a multi-tenant app with Citus also requires minimal changes to application code. We have support for popular frameworks like Ruby on Rails and Django.
+  使用Citus扩展多租户应用程序只需要对应用程序代码进行最少的更改。我们支持像Ruby on Rails和Django这样的流行框架。
 
-**Real-Time Analytics**
+**实时分析**
 
-  Applications needing massive parallelism, coordinating hundreds of cores for fast results to numerical, statistical, or counting queries. By sharding and parallelizing SQL queries across multiple nodes, Citus makes it possible to perform real-time queries across billions of records in under a second.
+  需要大规模并行性的应用程序，协调数百个内核，以便快速获得数字，统计或计数查询。通过在多个节点之间对SQL查询进行分片和并行化，Citus可以在一秒钟内对数十亿条记录执行实时查询。
 
-  * **Examples**: Customer-facing analytics dashboards requiring sub-second response times.
-  * **Characteristics**: Few tables, often centering around a big table of device-, site- or user-events and requiring high ingest volume of mostly immutable data. Relatively simple (but computationally intensive) analytics queries involving several aggregations and GROUP BYs.
+  * **示例**: 面向客户的分析仪表板，需要亚秒响应时间。
+  * **特征**: 少量的表，通常围绕设备-，站点-或用户事件的大表，并且需要高摄取量的大多数不可变数据。相对简单（但计算密集）的分析查询涉及多个聚合和GROUP BY。
 
-If your situation resembles either case above then the next step is to decide how to shard your data in the Citus cluster. As explained in the :ref:`citus_concepts` section, Citus assigns table rows to shards according to the hashed value of the table's distribution column. The database administrator's choice of distribution columns needs to match the access patterns of typical queries to ensure performance.
+如果您的情况类似于上述情况，则下一步是决定如何在Citus群集中对数据进行分片。如概念部分所述，Citus根据表的分发列的散列值将表行分配给分片。数据库管理员选择的分发列需要匹配典型查询的访问模式以确保性能。
