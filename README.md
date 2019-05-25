@@ -1,19 +1,22 @@
-#### Sphinx source files for Citus documentation
+#### Citus文档的Sphinx源文件
 
-To generate HTML version:
+要生成HTML版本：
 
-1. Install Sphinx from the [sphinx website](http://www.sphinx-doc.org/en/master/usage/installation.html)
-2. Clone this repository
-4. Generate HTML
+1. 从sphinx网站安装[sphinx website](http://www.sphinx-doc.org/en/master/usage/installation.html)
+2. 克隆此存储库
+3. 生成HTML
     ```bash
     cd citus_docs
     sphinx-build -b html -a -n . _build
 
-    # open _build/index.html in your browser
+    ＃在浏览器中打开 _build/index.html
     ```
 
 ---
 
-**Sphinx Installation Note:** on OS X it's better to install sphinx via [pip](https://pip.pypa.io/en/stable/installing/) rather than Homebrew.
-(The brew formula is keg-only and used primarily by other tools.)
-Use `pip install sphinx`.
+**Sphinx安装注意：在OS X上，安装sphinx用最好通过[pip](https://pip.pypa.io/en/stable/installing/) 而不是Homebrew.
+(brew公式只适用于 keg-only, 主要用于其他工具.)
+使用 `pip install sphinx`.
+
+
+Sphinx安装注意：在OS X上，最好通过pip而不是Homebrew 安装sphinx 。（酿造配方仅限桶装，主要用于其他工具。）使用pip install sphinx。

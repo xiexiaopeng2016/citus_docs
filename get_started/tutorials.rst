@@ -1,5 +1,5 @@
-Quick Tutorials
-###############
+快速教程
+########
 
 .. toctree::
 

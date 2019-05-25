@@ -1,33 +1,30 @@
-Citus Documentation
-===================
+Citus文档
+=========
 
-Welcome to the documentation for Citus 8.2! Citus horizontally scales PostgreSQL across commodity servers using sharding and replication. Its query engine parallelizes incoming SQL queries across these servers to enable real-time responses on large datasets.
+欢迎使用Citus 8.2的文档！Citus使用分片和复制在商品服务器上横向扩展PostgreSQL。它的查询引擎将这些服务器上的传入SQL查询并行化，以实现对大型数据集的实时响应。
 
 .. raw:: html
 
   <div class="front-menu row">
     <div class="col-md-4">
       <a class="box" href="portals/getting_started.html">
-        <h3>Getting Started</h3>
+        <h3>入门</h3>
         <img src="_images/number-one.png" />
-        Learn the Citus architecture, install locally,
-        and follow some ten-minute tutorials.
+        了解Citus体系结构，在本地安装，并遵循一些十分钟的教程。
       </a>
     </div>
     <div class="col-md-4">
       <a class="box" href="portals/use_cases.html">
-        <h3>Use Cases</h3>
+        <h3>用例</h3>
         <img src="_images/use-cases.png" />
-        See how Citus allows multi-tenant applications
-        to scale with minimal database changes.
+        了解Citus如何通过最少的数据库更改来扩展多租户应用程序。
       </a>
     </div>
     <div class="col-md-4">
       <a class="box" href="portals/migrating.html">
-        <h3>Migrating to Citus</h3>
+        <h3>迁移到Citus</h3>
         <img src="_images/migrating.png" />
-        Move from plain PostgreSQL to Citus, and discover
-        data modeling techniques for distributed systems.
+        从简单的PostgreSQL转移到Citus，并发现分布式系统的数据建模技术。
       </a>
     </div>
   </div>
@@ -36,24 +33,21 @@ Welcome to the documentation for Citus 8.2! Citus horizontally scales PostgreSQL
       <a class="box" href="portals/citus_cloud.html">
         <h3>Citus Cloud</h3>
         <img src="_images/cloud.png" />
-        Explore our secure, scalable, highly available
-        database-as-a-service.
+        探索我们安全，可扩展，高度可用的数据库即服务。
       </a>
     </div>
     <div class="col-md-4">
       <a class="box" href="portals/reference.html">
-        <h3>API / Reference</h3>
+        <h3>API / 参考</h3>
         <img src="_images/reference.png" />
-        Get the most out of Citus by learning its
-        functions and configuration.
+        通过了解Citus的功能和配置，充分利用Citus。
       </a>
     </div>
     <div class="col-md-4">
       <a class="box" href="portals/support.html">
-        <h3>Help and Support</h3>
+        <h3>帮助和支持</h3>
         <img src="_images/help.png" />
-        See the frequently asked questions, and
-        contact us. This is the page to get unstuck.
+        请参阅常见问题解答，并与我们联系。这是要解开的页面。
       </a>
     </div>
   </div>
