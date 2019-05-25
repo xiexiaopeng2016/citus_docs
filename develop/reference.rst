@@ -1,5 +1,5 @@
-SQL Reference
-#############
+SQL参考
+#######
 
 .. toctree::
    :maxdepth: 2

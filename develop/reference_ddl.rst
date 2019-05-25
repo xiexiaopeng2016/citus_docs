@@ -1,16 +1,16 @@
 .. _ddl:
 
-Creating and Modifying Distributed Tables (DDL)
-===============================================
+创建和修改分布式表（DDL）
+=======================
 
-.. note::
+.. 注意::
 
-   Citus (including :ref:`mx`) requires that DDL commands be run from the coordinator node only.
+   Citus (包括 :ref:`mx`) 要求仅从协调节点运行DDL命令
 
-Creating And Distributing Tables
---------------------------------
+创建和分布表
+-----------
 
-To create a distributed table, you need to first define the table schema. To do so, you can define a table using the `CREATE TABLE <http://www.postgresql.org/docs/current/static/sql-createtable.html>`_ statement in the same way as you would do with a regular PostgreSQL table.
+要创建分布式表，首先需要定义表模式。为此，您可以使用`CREATE TABLE <http://www.postgresql.org/docs/current/static/sql-createtable.html>`_语句以与使用常规PostgreSQL表相同的方式定义表。
 
 .. code-block:: sql
 
@@ -27,43 +27,34 @@ To create a distributed table, you need to first define the table schema. To do 
     	created_at timestamp
     );
 
-Next, you can use the create_distributed_table() function to specify the table
-distribution column and create the worker shards.
+接下来，您可以使用create_distributed_table（）函数指定表分布列并创建工作分片。
 
 .. code-block:: sql
 
     SELECT create_distributed_table('github_events', 'repo_id');
 
-This function informs Citus that the github_events table should be distributed
-on the repo_id column (by hashing the column value). The function also creates
-shards on the worker nodes using the citus.shard_count and
-citus.shard_replication_factor configuration values.
+此函数通知Citus应该在repo_id列上分发github_events表（通过散列列值）。该函数还使用citus.shard_count和citus.shard_replication_factor配置值在工作节点上创建分片。
 
-This example would create a total of citus.shard_count number of shards where each
-shard owns a portion of a hash token space and gets replicated based on the
-default citus.shard_replication_factor configuration value. The shard replicas
-created on the worker have the same table schema, index, and constraint
-definitions as the table on the coordinator. Once the replicas are created, this
-function saves all distributed metadata on the coordinator.
+此示例将创建总共citus.shard_count个分片数，其中每个分片拥有散列令牌空间的一部分，并根据默认的citus.shard_replication_factor配置值进行复制。在worker上创建的分片副本具有与协调器上的表相同的表模式，索引和约束定义。创建副本后，此函数会将所有分布式元数据保存在协调器上。
 
-Each created shard is assigned a unique shard id and all its replicas have the same shard id. Each shard is represented on the worker node as a regular PostgreSQL table with name 'tablename_shardid' where tablename is the name of the distributed table and shardid is the unique id assigned to that shard. You can connect to the worker postgres instances to view or run commands on individual shards.
+每个创建的分片都分配了一个唯一的分片ID，并且其所有副本都具有相同的分片ID。每个分片在工作节点上表示为名为“tablename_shardid”的常规PostgreSQL表，其中tablename是分布式表的名称，shardid是分配给该分片的唯一ID。您可以连接到工作节点postgres实例以查看或运行各个分片上的命令。
 
-You are now ready to insert data into the distributed table and run queries on it. You can also learn more about the UDF used in this section in the :ref:`user_defined_functions` of our documentation.
+您现在可以将数据插入到分布式表中并对其运行查询。您还可以在我们文档的Citus实用程序功能中了解有关本节中使用的:ref:`user_defined_functions`的更多信息。
 
 .. _reference_tables:
 
-Reference Tables
-~~~~~~~~~~~~~~~~
+引用表
+~~~~~~
 
-The above method distributes tables into multiple horizontal shards, but another possibility is distributing tables into a single shard and replicating the shard to every worker node. Tables distributed this way are called *reference tables.* They are used to store data that needs to be frequently accessed by multiple nodes in a cluster.
+上述方法将表分配到多个水平分片中，但另一种可能性是将表分配到单个分片中并将分片复制到每个工作节点。以这种方式分发的表称为引用表。它们用于存储需要由群集中的多个节点频繁访问的数据。
 
-Common candidates for reference tables include:
+常用的引用表包括:
 
-* Smaller tables which need to join with larger distributed tables.
-* Tables in multi-tenant apps which lack a tenant id column or which aren't associated with a tenant. (In some cases, to reduce migration effort, users might even choose to make reference tables out of tables associated with a tenant but which currently lack a tenant id.)
-* Tables which need unique constraints across multiple columns and are small enough.
+* 需要与较大的分布式表连接的较小表。
+* 多租户应用中缺少租户ID列或与租户无关的表。（在某些情况下，为了减少迁移工作量，用户甚至可能选择从与租户关联的表中创建引用表，但这些表当前缺少租户ID。）
+* 表需要跨多个列的唯一约束并且足够小。
 
-For instance suppose a multi-tenant eCommerce site needs to calculate sales tax for transactions in any of its stores. Tax information isn't specific to any tenant. It makes sense to consolidate it in a shared table. A US-centric reference table might look like this:
+例如，假设多租户电子商务网站需要计算其任何商店中的交易的销售税。税务信息并非特定于任何租户。将它合并到共享表中是有意义的。以美国为中心的引用表可能如下所示：
 
 .. code-block:: postgresql
 
@@ -75,27 +66,28 @@ For instance suppose a multi-tenant eCommerce site needs to calculate sales tax 
     general_sales_tax numeric(4,3)
   );
 
-  -- distribute it to all workers
+  -- 将其分布给所有工作节点
 
   SELECT create_reference_table('states');
 
-Now queries such as one calculating tax for a shopping cart can join on the :code:`states` table with no network overhead, and can add a foreign key to the state code for better validation.
+现在，诸如购物车的一个计算税的查询可以在没有网络开销的情况下连接:code:`states`表，并且可以向州代码添加外键以便更好地进行验证。
 
-In addition to distributing a table as a single replicated shard, the :code:`create_reference_table` UDF marks it as a reference table in the Citus metadata tables. Citus automatically performs two-phase commits (`2PC <https://en.wikipedia.org/wiki/Two-phase_commit_protocol>`_) for modifications to tables marked this way, which provides strong consistency guarantees.
+除了将表分布为单个复制的分片之外，:code:`create_reference_table` UDF 还将其标记为Citus元数据表中的引用表。Citus自动执行两阶段提交(`2PC <https://en.wikipedia.org/wiki/Two-phase_commit_protocol>`_)以修改以这种方式标记的表，从而提供强大的一致性保证。
 
-If you have an existing distributed table which has a shard count of one, you can upgrade it to be a recognized reference table by running
+如果现有分布式表的分片计数为1，则可以通过运行将其升级为可识别的引用表
 
 .. code-block:: postgresql
 
   SELECT upgrade_to_reference_table('table_name');
 
-For another example of using reference tables in a multi-tenant application, see :ref:`mt_ref_tables`.
+有关在多租户应用程序中使用引用表的另一个示例，请参阅 :ref:`mt_ref_tables`。
 
-Distributing Coordinator Data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+分布协调器数据
+~~~~~~~~~~~~~
 
-If an existing PostgreSQL database is converted into the coordinator node for a Citus cluster, the data in its tables can be distributed efficiently and with minimal interruption to an application.
+如果将现有的PostgreSQL数据库转换为Citus集群的协调器节点，则可以有效地分发其表中的数据，并且对应用程序的中断最小。
 
+:code:`create_distributed_table` 前面描述的函数适用于空表和非空表，对于后者，它会自动在整个集群中分配表行。您将知道它是否通过消息的存在来执行此操作，“注意：从本地表复制数据...”例如：
 The :code:`create_distributed_table` function described earlier works on both empty and non-empty tables, and for the latter it automatically distributes table rows throughout the cluster. You will know if it does this by the presence of the message, "NOTICE:  Copying data from local table..." For example:
 
 .. code-block:: postgresql
@@ -108,79 +100,80 @@ The :code:`create_distributed_table` function described earlier works on both em
 
    (1 row)
 
-Writes on the table are blocked while the data is migrated, and pending writes are handled as distributed queries once the function commits. (If the function fails then the queries become local again.) Reads can continue as normal and will become distributed queries once the function commits.
+迁移数据时会阻止表上的写入，并且一旦函数提交，挂起的写入将作为分布式查询处理。（如果函数失败，则查询将再次变为本地。）读取可以正常继续，并在函数提交后成为分布式查询。
 
-.. note::
+.. 注意::
 
-  When distributing a number of tables with foreign keys between them, it's best to drop the foreign keys before running :code:`create_distributed_table` and recreating them after distributing the tables. Foreign keys cannot always be enforced when one table is distributed and the other is not. However foreign keys *are* supported between distributed tables and reference tables.
+  当在它们之间分配许多具有外键的表时，最好在运行 :code:`create_distributed_table` 之前删除外键, 并在分发表之后重新创建它们。当一个表是分布式的，而另一个表不是分布式的时，不能总是强制执行外键。但是外键在分布表和参考表之间*都*支持。
 
-When migrating data from an external database, such as from Amazon RDS to Citus Cloud, first create the Citus distributed tables via :code:`create_distributed_table`, then copy the data into the table.
+当将数据从外部数据库(如Amazon RDS)迁移到Citus Cloud时，首先通过:code: ' create_distributed_table '创建Citus分布式表，然后将数据复制到表中
 
 .. _colocation_groups:
 
-Co-Locating Tables
-------------------
+共同定位表
+---------
 
-Co-location is the practice of dividing data tactically, keeping related information on the same machines to enable efficient relational operations, while taking advantage of the horizontal scalability for the whole dataset. For more information and examples see :ref:`colocation`.
+协同定位是在战术上划分数据，在相同机器上保留相关信息以实现有效的关系操作，同时利用整个数据集的水平可伸缩性的实践。有关更多信息和示例，请参阅 :ref:`colocation`。
 
-Tables are co-located in groups. To manually control a table's co-location group assignment use the optional :code:`colocate_with` parameter of :code:`create_distributed_table`. If you don't care about a table's co-location then omit this parameter. It defaults to the value :code:`'default'`, which groups the table with any other default co-location table having the same distribution column type, shard count, and replication factor.
+表共同定位于组中。要手动控制表的共址组分配，请使用:code:`create_distributed_table`的可选参数:code:`colocate_with`。如果您不关心表的共址，则省略此参数。它默认为该值'default'，该值将表与具有相同分发列类型，分片计数和复制因子的任何其他默认协同定位表分组。
 
 .. code-block:: postgresql
 
-  -- these tables are implicitly co-located by using the same
-  -- distribution column type and shard count with the default
-  -- co-location group
+  -- 这些表通过使用相同的
+  -- 分布列类型和具有默认
+  -- 共址组的分片计数隐式地共同定位
 
   SELECT create_distributed_table('A', 'some_int_col');
   SELECT create_distributed_table('B', 'other_int_col');
 
-When a new table is not related to others in its would-be implicit co-location group, specify :code:`colocated_with => 'none'`.
+如果新表与其可能的隐式共址组中的其他表无关，请指定:code:`colocated_with => 'none'`。
 
 .. code-block:: postgresql
 
-  -- not co-located with other tables
+  -- 与其他表不在同一共址
 
   SELECT create_distributed_table('A', 'foo', colocate_with => 'none');
 
-Splitting unrelated tables into their own co-location groups will improve :ref:`shard rebalancing <shard_rebalancing>` performance, because shards in the same group have to be moved together.
+将不相关的表拆分到它们自己的共址组中将改善分片 :ref:`重新平衡 <shard_rebalancing>` 性能，因为同一组中的分片必须一起移动。
 
-When tables are indeed related (for instance when they will be joined), it can make sense to explicitly co-locate them. The gains of appropriate co-location are more important than any rebalancing overhead.
+当表确实相关时（例如，当它们将被连接时），明确地共同定位它们是有意义的。适当的共址的收益比任何重新平衡开销都重要。
 
-To explicitly co-locate multiple tables, distribute one and then put the others into its co-location group. For example:
+要明确地共同定位多个表，请分配一个表，然后将其他表放入其共址组。例如：
 
 .. code-block:: postgresql
 
-  -- distribute stores
+  -- 分布 stores
   SELECT create_distributed_table('stores', 'store_id');
 
-  -- add to the same group as stores
+  -- 添加到与stores相同的组中
   SELECT create_distributed_table('orders', 'store_id', colocate_with => 'stores');
   SELECT create_distributed_table('products', 'store_id', colocate_with => 'stores');
 
-Information about co-location groups is stored in the :ref:`pg_dist_colocation <colocation_group_table>` table, while :ref:`pg_dist_partition <partition_table>` reveals which tables are assigned to which groups.
+有关共址组的信息存储在:ref:`pg_dist_colocation <colocation_group_table>`表中，而 :ref:`pg_dist_partition <partition_table>` 显示哪些表分配给哪些组。
 
 .. _marking_colocation:
 
-Upgrading from Citus 5.x
-~~~~~~~~~~~~~~~~~~~~~~~~
+从Citus 5.x升级
+~~~~~~~~~~~~~~~
 
-Starting with Citus 6.0, we made co-location a first-class concept, and started tracking tables' assignment to co-location groups in pg_dist_colocation. Since Citus 5.x didn't have this concept, tables created with Citus 5 were not explicitly marked as co-located in metadata, even when the tables were physically co-located.
+从Citus 6.0开始，我们将co-location设置为一等的概念，并开始在pg_dist_colocation中跟踪表对共址组的分配。由于Citus 5.x没有这个概念，因此使用Citus 5创建的表没有明确标记为共存于元数据中，即使这些表格在物理上位于同一位置。
 
+由于Citus使用协同定位元数据信息进行查询优化和下推，因此向Citus通知此先前创建的表的共址非常重要。要修复元数据，只需使用mark_tables_colocated将表标记为co- located：
 Since Citus uses co-location metadata information for query optimization and pushdown, it becomes critical to inform Citus of this co-location for previously created tables. To fix the metadata, simply mark the tables as co-located using :ref:`mark_tables_colocated`:
 
 .. code-block:: postgresql
 
-  -- Assume that stores, products and line_items were created in a Citus 5.x database.
+  -- 假设 stores, products and line_items 是在Citus 5.x数据库中创建的.
 
-  -- Put products and line_items into store's co-location group
+  -- 将products和line_items放入stores的共址组
   SELECT mark_tables_colocated('stores', ARRAY['products', 'line_items']);
 
-This function requires the tables to be distributed with the same method, column type, number of shards, and replication method. It doesn't re-shard or physically move data, it merely updates Citus metadata.
+此函数要求使用相同的方法，列类型，分片数和复制方法分步表。它不会重新分片或物理移动数据，它只是更新Citus元数据。
 
-Dropping Tables
----------------
+删除表
+------
 
-You can use the standard PostgreSQL DROP TABLE command to remove your distributed tables. As with regular tables, DROP TABLE removes any indexes, rules, triggers, and constraints that exist for the target table. In addition, it also drops the shards on the worker nodes and cleans up their metadata.
+您可以使用标准PostgreSQL DROP TABLE命令删除分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作节点上的分片并清除其元数据。
 
 .. code-block:: sql
 
@@ -188,31 +181,31 @@ You can use the standard PostgreSQL DROP TABLE command to remove your distribute
 
 .. _ddl_prop_support:
 
-Modifying Tables
-----------------
+修改表
+------
 
-Citus automatically propagates many kinds of DDL statements, which means that modifying a distributed table on the coordinator node will update shards on the workers too. Other DDL statements require manual propagation, and certain others are prohibited such as those which would modify a distribution column. Attempting to run DDL that is ineligible for automatic propagation will raise an error and leave tables on the coordinator node unchanged.
+Citus自动传播多种DDL语句，这意味着在协调器节点上修改分布式表也会更新工作者的分片。其他DDL语句需要手动传播，而某些其他DDL语句则是禁止的，例如那些会修改分发列的语句。尝试运行不符合自动传播条件的DDL将引发错误并使协调器节点上的表保持不变。
 
-Here is a reference of the categories of DDL statements which propagate. Note that automatic propagation can be enabled or disabled with a :ref:`configuration parameter <enable_ddl_prop>`.
+以下是传播的DDL语句类别的参考。请注意，可以使用:ref:`配置参数 <enable_ddl_prop>`启用或禁用自动传播。
 
-Adding/Modifying Columns
-~~~~~~~~~~~~~~~~~~~~~~~~
+添加/修改列
+~~~~~~~~~~
 
-Citus propagates most `ALTER TABLE <https://www.postgresql.org/docs/current/static/ddl-alter.html>`_ commands automatically. Adding columns or changing their default values work as they would in a single-machine PostgreSQL database:
+Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current/static/ddl-alter.html>`_命令。添加列或更改其默认值的工作方式与在单机PostgreSQL数据库中的工作方式相同：
 
 .. code-block:: postgresql
 
-  -- Adding a column
+  -- 添加一列
 
   ALTER TABLE products ADD COLUMN description text;
 
-  -- Changing default value
+  -- 更改默认值
 
   ALTER TABLE products ALTER COLUMN price SET DEFAULT 7.77;
 
-Significant changes to an existing column like renaming it or changing its data type are fine too. However the data type of the :ref:`distribution column <distributed_data_modeling>` cannot be altered. This column determines how table data distributes through the Citus cluster, and modifying its data type would require moving the data.
+对现有列进行重大更改(如重命名列或更改其数据类型)也可以。但是，不能更改分布列的数据类型。此列确定表数据如何通过Citus群集分发，并且修改其数据类型需要移动数据。
 
-Attempting to do so causes an error:
+试图这样做会导致错误：
 
 .. code-block:: postgres
 
@@ -223,102 +216,102 @@ Attempting to do so causes an error:
   ALTER COLUMN store_id TYPE text;
 
   /*
-  ERROR:  XX000: cannot execute ALTER TABLE command involving partition column
+  ERROR:  XX000: 无法执行涉及分区列的ALTER TABLE命令
   LOCATION:  ErrorIfUnsupportedAlterTableStmt, multi_utility.c:2150
   */
 
-Adding/Removing Constraints
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+添加/删除约束
+~~~~~~~~~~~~
 
-Using Citus allows you to continue to enjoy the safety of a relational database, including database constraints (see the PostgreSQL `docs <https://www.postgresql.org/docs/current/static/ddl-constraints.html>`_). Due to the nature of distributed systems, Citus will not cross-reference uniqueness constraints or referential integrity between worker nodes.
+使用Citus可以让您继续享受关系数据库的安全性，包括数据库约束（请参阅PostgreSQL `文档 <https://www.postgresql.org/docs/current/static/ddl-constraints.html>`_）。由于分布式系统的性质，Citus不会交叉引用工作节点之间的唯一性约束或参照完整性。
 
-Foreign keys may be created in these situations:
+在这些情况下可能会创建外键：
 
-* between two local (non-distributed) tables,
-* between two :ref:`colocated <colocation>` distributed tables when the key includes the distribution column, or
-* as a distributed table referencing a :ref:`reference table <reference_tables>`
+* 在两个本地（非分布式）表之间，
+* 当键包含分发列时，在两个:ref:`共置 <colocation>`的分布式表之间，或
+* 作为一个分布式表引用一个:ref:`引用表 <reference_tables>`
 
-Reference tables are not supported as the *referencing* table of a foreign key constraint, i.e. keys from reference to reference and reference to distributed are not supported.
+不支持将引用表作为外键约束的*引用*表，即不支持从引用到引用和从引用到分布式的键。
 
-To set up a foreign key between colocated distributed tables, always include the distribution column in the key. This may involve making the key compound.
+要在共置的分布式表之间设置外键，请始终在键中包含分发列。这可能涉及制作键组合。
 
-.. note::
+.. 注意::
 
-  Primary keys and uniqueness constraints must include the distribution column. Adding them to a non-distribution column will generate an error (see :ref:`non_distribution_uniqueness`).
+  主键和唯一性约束必须包括分发列。将它们添加到非分发列将生成错误（请参阅:ref:`non_distribution_uniqueness`）。
 
-This example shows how to create primary and foreign keys on distributed tables:
+此示例显示如何在分布式表上创建主键和外键：
 
 .. code-block:: postgresql
 
   --
-  -- Adding a primary key
+  -- 添加主键
   -- --------------------
 
-  -- We'll distribute these tables on the account_id. The ads and clicks
-  -- tables must use compound keys that include account_id.
+  --我们将在account_id上分发这些表。ads和clicks
+  -- 表必须使用包含account_id的复合键。
 
   ALTER TABLE accounts ADD PRIMARY KEY (id);
   ALTER TABLE ads ADD PRIMARY KEY (account_id, id);
   ALTER TABLE clicks ADD PRIMARY KEY (account_id, id);
 
-  -- Next distribute the tables
+  -- 接下来分布表
 
   SELECT create_distributed_table('accounts', 'id');
   SELECT create_distributed_table('ads',      'account_id');
   SELECT create_distributed_table('clicks',   'account_id');
 
   --
-  -- Adding foreign keys
+  -- 添加外键
   -- -------------------
 
-  -- Note that this can happen before or after distribution, as long as
-  -- there exists a uniqueness constraint on the target column(s) which
-  -- can only be enforced before distribution.
+  -- 请注意，这可以在分发之前或之后发生，只要
+  -- 目标列上存在唯一性约束
+  -- 只能在分发之前强制执行。
 
   ALTER TABLE ads ADD CONSTRAINT ads_account_fk
     FOREIGN KEY (account_id) REFERENCES accounts (id);
   ALTER TABLE clicks ADD CONSTRAINT clicks_ad_fk
     FOREIGN KEY (account_id, ad_id) REFERENCES ads (account_id, id);
 
-Similarly, include the distribution column in uniqueness constraints:
+同样，在唯一性约束中包含分发列：
 
 .. code-block:: postgresql
 
-  -- Suppose we want every ad to use a unique image. Notice we can
-  -- enforce it only per account when we distribute by account id.
+  -- 假设我们希望每个广告都使用独特的图片。请注意，我们可以
+  -- 当我们按帐户id分布时，仅对每个帐户强制执行它。
 
   ALTER TABLE ads ADD CONSTRAINT ads_unique_image
     UNIQUE (account_id, image_url);
 
-Not-null constraints can be applied to any column (distribution or not) because they require no lookups between workers.
+非空约束可以应用于任何列（分发或不分发），因为它们不需要在worker之间进行查找。
 
 .. code-block:: postgresql
 
   ALTER TABLE ads ALTER COLUMN image_url SET NOT NULL;
 
-Using NOT VALID Constraints
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+使用NOT VALID约束
+~~~~~~~~~~~~~~~~~
 
-In some situations it can be useful to enforce constraints for new rows, while allowing existing non-conforming rows to remain unchanged. Citus supports this feature for CHECK constraints and foreign keys, using PostgreSQL's "NOT VALID" constraint designation.
+在某些情况下，对新行强制执行约束可能很有用，同时允许现有的不符合行保持不变。Citus使用PostgreSQL的“NOT VALID”约束指定支持CHECK约束和外键的此功能。
 
-For example, consider an application which stores user profiles in a :ref:`reference table <reference_tables>`.
+例如，考虑将用户配置文件存储在:ref:`引用表 <reference_tables>`中的应用程序。
 
 .. code-block:: postgres
 
-   -- we're using the "text" column type here, but a real application
-   -- might use "citext" which is available in a postgres contrib module
+   -- 我们在这里使用“text”列类型，但是一个真正的应用程序
+   -- 可能使用postgres contrib模块中提供的“citext<https://www.postgresql.org/docs/current/citext.html>`_”
 
    CREATE TABLE users ( email text PRIMARY KEY );
    SELECT create_reference_table('users');
 
-In the course of time imagine that a few non-addresses get into the table.
+随着时间的推移想象一些不正确的地址进入表中。
 
 .. code-block:: postgres
 
    INSERT INTO users VALUES
       ('foo@example.com'), ('hacker12@aol.com'), ('lol');
 
-We would like to validate the addresses, but PostgreSQL does not ordinarily allow us to add a CHECK constraint that fails for existing rows. However it *does* allow a constraint marked not valid:
+我们想验证地址，但PostgreSQL通常不允许我们添加对现有行失败的CHECK约束。但是它*确实*允许标记为无效的约束：
 
 .. code-block:: postgres
 
@@ -328,7 +321,7 @@ We would like to validate the addresses, but PostgreSQL does not ordinarily allo
       '^[a-zA-Z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$'
    ) NOT VALID;
 
-This succeeds, and new rows are protected.
+这成功了，新行受到保护。
 
 .. code-block:: postgres
 
@@ -340,40 +333,40 @@ This succeeds, and new rows are protected.
    DETAIL:  Failing row contains (fake).
    */
 
-Later, during non-peak hours, a database administrator can attempt to fix the bad rows and re-validate the constraint.
+稍后，在非高峰时段，数据库管理员可以尝试修复错误的行并重新验证约束。
 
 .. code-block:: postgres
 
-   -- later, attempt to validate all rows
+   -- 稍后，尝试验证所有行
    ALTER TABLE users
    VALIDATE CONSTRAINT syntactic_email;
 
-The PostgreSQL documentation has more information about NOT VALID and VALIDATE CONSTRAINT in the `ALTER TABLE <https://www.postgresql.org/docs/current/sql-altertable.html>`_ section.
+PostgreSQL文档在 `ALTER TABLE <https://www.postgresql.org/docs/current/sql-altertable.html>`_部分中提供了有关NOT VALID和VALIDATE CONSTRAINT的更多信息。
 
-Adding/Removing Indices
-~~~~~~~~~~~~~~~~~~~~~~~
+添加/删除索引
+~~~~~~~~~~~~
 
-Citus supports adding and removing `indices <https://www.postgresql.org/docs/current/static/sql-createindex.html>`_:
+Citus支持添加和删除`索引 <https://www.postgresql.org/docs/current/static/sql-createindex.html>`_：
 
 .. code-block:: postgresql
 
-  -- Adding an index
+  -- 添加索引
 
   CREATE INDEX clicked_at_idx ON clicks USING BRIN (clicked_at);
 
-  -- Removing an index
+  -- 删除索引
 
   DROP INDEX clicked_at_idx;
 
-Adding an index takes a write lock, which can be undesirable in a multi-tenant "system-of-record." To minimize application downtime, create the index `concurrently <https://www.postgresql.org/docs/current/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY>`_ instead. This method requires more total work than a standard index build and takes significantly longer to complete. However, since it allows normal operations to continue while the index is built, this method is useful for adding new indexes in a production environment.
+添加索引需要写入锁定，这在多租户“记录系统”中可能是不合需要的。为了最小化应用程序停机时间，请创建`concurrently <https://www.postgresql.org/docs/current/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY>`_ 索引代替。此方法比标准索引构建需要更多的总工作，并且需要更长的时间才能完成。但是，由于它允许在构建索引时继续正常操作，因此此方法对于在生产环境中添加新索引很有用。
 
 .. code-block:: postgresql
 
-  -- Adding an index without locking table writes
+  -- 添加索引而不锁定表写入
 
   CREATE INDEX CONCURRENTLY clicked_at_idx ON clicks USING BRIN (clicked_at);
 
-Manual Modification
-~~~~~~~~~~~~~~~~~~~
+手动修改
+~~~~~~~
 
-Currently other DDL commands are not auto-propagated, however you can propagate the changes manually. See :ref:`manual_prop`.
+目前，其他DDL命令不会自动传播，但您可以手动传播更改。请参见:ref:`manual_prop`。
