@@ -5,7 +5,7 @@
 
 .. 注意::
 
-   Citus (包括 :ref:`mx`) 要求仅从协调节点运行DDL命令
+   Citus (包括 :ref:`mx`) 要求仅从协调者节点运行DDL命令
 
 创建和分布表
 -----------
@@ -33,11 +33,11 @@
 
     SELECT create_distributed_table('github_events', 'repo_id');
 
-此函数通知Citus应该在repo_id列上分发github_events表（通过散列列值）。该函数还使用citus.shard_count和citus.shard_replication_factor配置值在工作节点上创建分片。
+此函数通知Citus应该在repo_id列上分发github_events表（通过散列列值）。该函数还使用citus.shard_count和citus.shard_replication_factor配置值在工作者节点上创建分片。
 
-此示例将创建总共citus.shard_count个分片数，其中每个分片拥有散列令牌空间的一部分，并根据默认的citus.shard_replication_factor配置值进行复制。在worker上创建的分片副本具有与协调器上的表相同的表模式，索引和约束定义。创建副本后，此函数会将所有分布式元数据保存在协调器上。
+此示例将创建总共citus.shard_count个分片数，其中每个分片拥有散列令牌空间的一部分，并根据默认的citus.shard_replication_factor配置值进行复制。在worker上创建的分片副本具有与协调者上的表相同的表模式，索引和约束定义。创建副本后，此函数会将所有分布式元数据保存在协调者上。
 
-每个创建的分片都分配了一个唯一的分片ID，并且其所有副本都具有相同的分片ID。每个分片在工作节点上表示为名为“tablename_shardid”的常规PostgreSQL表，其中tablename是分布式表的名称，shardid是分配给该分片的唯一ID。您可以连接到工作节点postgres实例以查看或运行各个分片上的命令。
+每个创建的分片都分配了一个唯一的分片ID，并且其所有副本都具有相同的分片ID。每个分片在工作者节点上表示为名为“tablename_shardid”的常规PostgreSQL表，其中tablename是分布式表的名称，shardid是分配给该分片的唯一ID。您可以连接到工作者节点postgres实例以查看或运行各个分片上的命令。
 
 您现在可以将数据插入到分布式表中并对其运行查询。您还可以在我们文档的Citus实用程序功能中了解有关本节中使用的:ref:`user_defined_functions`的更多信息。
 
@@ -46,7 +46,7 @@
 引用表
 ~~~~~~
 
-上述方法将表分配到多个水平分片中，但另一种可能性是将表分配到单个分片中并将分片复制到每个工作节点。以这种方式分发的表称为引用表。它们用于存储需要由群集中的多个节点频繁访问的数据。
+上述方法将表分配到多个水平分片中，但另一种可能性是将表分配到单个分片中并将分片复制到每个工作者节点。以这种方式分发的表称为引用表。它们用于存储需要由群集中的多个节点频繁访问的数据。
 
 常用的引用表包括:
 
@@ -66,7 +66,7 @@
     general_sales_tax numeric(4,3)
   );
 
-  -- 将其分布给所有工作节点
+  -- 将其分布给所有工作者节点
 
   SELECT create_reference_table('states');
 
@@ -82,10 +82,10 @@
 
 有关在多租户应用程序中使用引用表的另一个示例，请参阅 :ref:`mt_ref_tables`。
 
-分布协调器数据
+分布协调者数据
 ~~~~~~~~~~~~~
 
-如果将现有的PostgreSQL数据库转换为Citus集群的协调器节点，则可以有效地分发其表中的数据，并且对应用程序的中断最小。
+如果将现有的PostgreSQL数据库转换为Citus集群的协调者节点，则可以有效地分发其表中的数据，并且对应用程序的中断最小。
 
 :code:`create_distributed_table` 前面描述的函数适用于空表和非空表，对于后者，它会自动在整个集群中分配表行。您将知道它是否通过消息的存在来执行此操作，“注意：从本地表复制数据...”例如：
 The :code:`create_distributed_table` function described earlier works on both empty and non-empty tables, and for the latter it automatically distributes table rows throughout the cluster. You will know if it does this by the presence of the message, "NOTICE:  Copying data from local table..." For example:
@@ -173,7 +173,7 @@ Since Citus uses co-location metadata information for query optimization and pus
 删除表
 ------
 
-您可以使用标准PostgreSQL DROP TABLE命令删除分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作节点上的分片并清除其元数据。
+您可以使用标准PostgreSQL DROP TABLE命令删除分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作者节点上的分片并清除其元数据。
 
 .. code-block:: sql
 
@@ -184,7 +184,7 @@ Since Citus uses co-location metadata information for query optimization and pus
 修改表
 ------
 
-Citus自动传播多种DDL语句，这意味着在协调器节点上修改分布式表也会更新工作者的分片。其他DDL语句需要手动传播，而某些其他DDL语句则是禁止的，例如那些会修改分发列的语句。尝试运行不符合自动传播条件的DDL将引发错误并使协调器节点上的表保持不变。
+Citus自动传播多种DDL语句，这意味着在协调者节点上修改分布式表也会更新工作者的分片。其他DDL语句需要手动传播，而某些其他DDL语句则是禁止的，例如那些会修改分发列的语句。尝试运行不符合自动传播条件的DDL将引发错误并使协调者节点上的表保持不变。
 
 以下是传播的DDL语句类别的参考。请注意，可以使用:ref:`配置参数 <enable_ddl_prop>`启用或禁用自动传播。
 
@@ -223,7 +223,7 @@ Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current
 添加/删除约束
 ~~~~~~~~~~~~
 
-使用Citus可以让您继续享受关系数据库的安全性，包括数据库约束（请参阅PostgreSQL `文档 <https://www.postgresql.org/docs/current/static/ddl-constraints.html>`_）。由于分布式系统的性质，Citus不会交叉引用工作节点之间的唯一性约束或参照完整性。
+使用Citus可以让您继续享受关系数据库的安全性，包括数据库约束（请参阅PostgreSQL `文档 <https://www.postgresql.org/docs/current/static/ddl-constraints.html>`_）。由于分布式系统的性质，Citus不会交叉引用工作者节点之间的唯一性约束或参照完整性。
 
 在这些情况下可能会创建外键：
 

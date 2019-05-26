@@ -5,6 +5,12 @@
       <change beforePath="$PROJECT_DIR$/develop/reference_ddl.rst" beforeDir="false" afterPath="$PROJECT_DIR$/develop/reference_ddl.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/develop/reference_dml.rst" beforeDir="false" afterPath="$PROJECT_DIR$/develop/reference_dml.rst" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/develop/reference_processing.rst" beforeDir="false" afterPath="$PROJECT_DIR$/develop/reference_processing.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/develop/reference_sql.rst" beforeDir="false" afterPath="$PROJECT_DIR$/develop/reference_sql.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/get_started/concepts.rst" beforeDir="false" afterPath="$PROJECT_DIR$/get_started/concepts.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/get_started/tutorial_multi_tenant.rst" beforeDir="false" afterPath="$PROJECT_DIR$/get_started/tutorial_multi_tenant.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/get_started/tutorial_realtime_analytics.rst" beforeDir="false" afterPath="$PROJECT_DIR$/get_started/tutorial_realtime_analytics.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/get_started/what_is_citus.rst" beforeDir="false" afterPath="$PROJECT_DIR$/get_started/what_is_citus.rst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sharding/data_modeling.rst" beforeDir="false" afterPath="$PROJECT_DIR$/sharding/data_modeling.rst" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,13 +23,82 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/develop/reference_processing.rst">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-67">
-              <caret line="191" column="60" lean-forward="true" selection-start-line="191" selection-start-column="60" selection-end-line="191" selection-end-column="60" />
+            <state relative-caret-position="228">
+              <caret line="12" column="25" lean-forward="true" selection-start-line="12" selection-start-column="25" selection-end-line="12" selection-end-column="25" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/develop/reference_ddl.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="386">
+              <caret line="225" selection-start-line="225" selection-end-line="226" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/develop/reference_dml.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="2801">
+              <caret line="191" column="15" selection-start-line="191" selection-start-column="15" selection-end-line="191" selection-end-column="15" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/develop/reference_sql.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="4359">
+              <caret line="245" column="62" selection-start-line="245" selection-start-column="62" selection-end-line="245" selection-end-column="62" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/get_started/concepts.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="2269">
+              <caret line="129" column="77" selection-start-line="129" selection-start-column="77" selection-end-line="129" selection-end-column="77" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/get_started/what_is_citus.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="115">
+              <caret line="20" column="30" selection-start-line="20" selection-start-column="30" selection-end-line="20" selection-end-column="30" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/sharding/data_modeling.rst">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="80">
+              <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
             </state>
           </provider>
         </entry>
       </file>
     </leaf>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>协调器节点</find>
+      <find>工作节点</find>
+      <find>协调器</find>
+    </findStrings>
+    <replaceStrings>
+      <replace>协调者节点</replace>
+      <replace>工作者节点</replace>
+      <replace>协调者</replace>
+    </replaceStrings>
+    <dirStrings>
+      <dir>C:\code\citus_docs</dir>
+    </dirStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -31,11 +106,17 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
+        <option value="$PROJECT_DIR$/develop/reference_ddl.rst" />
+        <option value="$PROJECT_DIR$/develop/reference_dml.rst" />
+        <option value="$PROJECT_DIR$/develop/reference_sql.rst" />
+        <option value="$PROJECT_DIR$/get_started/concepts.rst" />
+        <option value="$PROJECT_DIR$/get_started/what_is_citus.rst" />
+        <option value="$PROJECT_DIR$/sharding/data_modeling.rst" />
         <option value="$PROJECT_DIR$/develop/reference_processing.rst" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="71" />
     <option name="y" value="452" />
     <option name="width" value="1854" />
@@ -94,28 +175,28 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1558859782882</updated>
-      <workItem from="1558859784305" duration="679000" />
+      <workItem from="1558859784305" duration="1412000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="679000" />
+    <option name="totallyTimeSpent" value="1412000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="57" y="362" width="1483" height="503" extended-state="0" />
+    <frame x="55" y="-7" width="1488" height="878" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Designer" />
       <window_info id="UI Designer" />
       <window_info id="Favorites" side_tool="true" />
-      <window_info content_ui="combo" id="Project" order="0" weight="0.2505263" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24965034" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Docker" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" />
       <window_info anchor="bottom" id="Terminal" />
       <window_info anchor="bottom" id="Event Log" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info active="true" anchor="bottom" id="Find" order="1" visible="true" weight="0.32998747" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
@@ -135,10 +216,52 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/develop/reference_ddl.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="386">
+          <caret line="225" selection-start-line="225" selection-end-line="226" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/develop/reference_dml.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2801">
+          <caret line="191" column="15" selection-start-line="191" selection-start-column="15" selection-end-line="191" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/develop/reference_sql.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4359">
+          <caret line="245" column="62" selection-start-line="245" selection-start-column="62" selection-end-line="245" selection-end-column="62" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/get_started/concepts.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2269">
+          <caret line="129" column="77" selection-start-line="129" selection-start-column="77" selection-end-line="129" selection-end-column="77" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/get_started/what_is_citus.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="115">
+          <caret line="20" column="30" selection-start-line="20" selection-start-column="30" selection-end-line="20" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/sharding/data_modeling.rst">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="80">
+          <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/develop/reference_processing.rst">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-67">
-          <caret line="191" column="60" lean-forward="true" selection-start-line="191" selection-start-column="60" selection-end-line="191" selection-end-column="60" />
+        <state relative-caret-position="228">
+          <caret line="12" column="25" lean-forward="true" selection-start-line="12" selection-start-column="25" selection-end-line="12" selection-end-column="25" />
         </state>
       </provider>
     </entry>
