@@ -1,12 +1,12 @@
 .. _dml:
 
-Ingesting, Modifying Data (DML)
-===============================
+摄取，修改数据（DML）
+===================
 
-Inserting Data
---------------
+插入数据
+--------
 
-To insert data into distributed tables, you can use the standard PostgreSQL `INSERT <http://www.postgresql.org/docs/current/static/sql-insert.html>`_ commands. As an example, we pick two rows randomly from the Github Archive dataset.
+要将数据插入分布式表，可以使用标准的PostgreSQL `INSERT <http://www.postgresql.org/docs/current/static/sql-insert.html>`_命令。例如，我们从Github Archive数据集中随机选取两行。
 
 .. code-block:: sql
 
@@ -29,9 +29,9 @@ To insert data into distributed tables, you can use the standard PostgreSQL `INS
 
     INSERT INTO github_events VALUES (2489368389,'WatchEvent','t',28229924,'{"action": "started"}','{"id": 28229924, "url": "https://api.github.com/repos/inf0rmer/blanket", "name": "inf0rmer/blanket"}','{"id": 1405427, "url": "https://api.github.com/users/tategakibunko", "login": "tategakibunko", "avatar_url": "https://avatars.githubusercontent.com/u/1405427?", "gravatar_id": ""}',NULL,'2015-01-01 00:00:24');
 
-When inserting rows into distributed tables, the distribution column of the row being inserted must be specified. Based on the distribution column, Citus determines the right shard to which the insert should be routed to. Then, the query is forwarded to the right shard, and the remote insert command is executed on all the replicas of that shard.
+将行插入分布式表时，必须指定要插入的行的分布列。根据分布列，Citus确定应将插入路由到的正确分片。然后，查询将转发到正确的分片，并在该分片的所有副本上执行远程插入命令。
 
-Sometimes it's convenient to put multiple insert statements together into a single insert of multiple rows. It can also be more efficient than making repeated database queries. For instance, the example from the previous section can be loaded all at once like this:
+有时将多个插入语句放在一起插入多行的单个插入是很方便的。它也比重复数据库查询更有效。例如，上一节中的示例可以像这样一次加载：
 
 .. code-block:: sql
 
@@ -42,51 +42,51 @@ Sometimes it's convenient to put multiple insert statements together into a sing
         2489368389,'WatchEvent','t',28229924,'{"action": "started"}','{"id": 28229924, "url": "https://api.github.com/repos/inf0rmer/blanket", "name": "inf0rmer/blanket"}','{"id": 1405427, "url": "https://api.github.com/users/tategakibunko", "login": "tategakibunko", "avatar_url": "https://avatars.githubusercontent.com/u/1405427?", "gravatar_id": ""}',NULL,'2015-01-01 00:00:24'
       );
 
-"From Select" Clause (Distributed Rollups)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"From Select"子句（分布式汇总）
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Citus also supports ``INSERT … SELECT`` statements -- which insert rows based on the results of a select query. This is a convenient way to fill tables and also allows "upserts" with the ``ON CONFLICT`` clause, the easiest way to do :ref:`distributed rollups <rollups>`.
+Citus还支持``INSERT … SELECT``语句 - 根据选择查询的结果插入行。这是一种填充表的便捷方式，也允许使用``ON CONFLICT<https://yq.aliyun.com/articles/74419>`_``子句“upserts”，这是执行分布式汇总的最简单方法。
 
-In Citus there are two ways that inserting from a select statement can happen. The first is if the source tables and destination table are :ref:`colocated <colocation>`, and the select/insert statements both include the distribution column. In this case Citus can push the ``INSERT … SELECT`` statement down for parallel execution on all nodes.
+在Citus中，有两种方法可以从select语句中插入。第一种是如果源表和目标表是:ref:`共址 <colocation>`，并且select/insert语句都包括分布列。在这种情况下，Citus可以将``INSERT … SELECT``语句推送到所有节点上并行执行。
 
-The second way of executing an ``INSERT … SELECT`` statement is selecting the results from worker nodes, pulling the data up to the coordinator node, and then issuing an INSERT statement from the coordinator with the data. Citus is forced to use this approach when the source and destination tables are not colocated. Because of the network overhead, this method is not as efficient.
+执行``INSERT … SELECT``语句的第二种方法是从工作节点中选择结果，将数据拉到协调器节点，然后从协调器发出带有数据的INSERT语句。当源表和目标表没有共址时，Citus被迫使用这种方法。由于网络开销，此方法效率不高。
 
-If upserts are an important operation in your application, the ideal solution is to model the data so that the source and destination tables are colocated, and so that the distribution column can be part of the GROUP BY clause in the upsert statement (if aggregating). This allows the operation to run in parallel across worker nodes for maximum speed.
+如果upserts是应用程序中的一项重要操作，那么理想的解决方案是对数据进行建模，以便对源表和目标表进行共址，并使分布列可以成为upsert语句中GROUP BY子句的一部分(如果进行聚合)。这允许操作在工作节点之间并行运行，以获得最大速度。
 
-When in doubt about which method Citus is using, use the EXPLAIN command, as described in :ref:`postgresql_tuning`.
+如果对Citus使用的方法有疑问，请使用EXPLAIN命令，如:ref:`postgresql_tuning`中所述。
 
-COPY Command (Bulk load)
-~~~~~~~~~~~~~~~~~~~~~~~~
+COPY命令（批量加载）
+~~~~~~~~~~~~~~~~~~~
 
-To bulk load data from a file, you can directly use `PostgreSQL's \\COPY command <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_.
+要批量加载文件中的数据，可以直接使用`PostgreSQL的 \\COPY命令 <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_.。
 
-First download our example github_events dataset by running:
+首先通过运行以下命令下载我们的示例github_events数据集：
 
 .. code-block:: bash
 
     wget http://examples.citusdata.com/github_archive/github_events-2015-01-01-{0..5}.csv.gz
     gzip -d github_events-2015-01-01-*.gz
 
-Then, you can copy the data using psql:
+然后，您可以使用psql复制数据：
 
 .. code-block:: psql
 
     \COPY github_events FROM 'github_events-2015-01-01-0.csv' WITH (format CSV)
 
-.. note::
+.. 注意::
 
-    There is no notion of snapshot isolation across shards, which means that a multi-shard SELECT that runs concurrently with a COPY might see it committed on some shards, but not on others. If the user is storing events data, he may occasionally observe small gaps in recent data. It is up to applications to deal with this if it is a problem (e.g.  exclude the most recent data from queries, or use some lock).
+    跨分片没有快照隔离的概念，这意味着与COPY同时运行的多分片SELECT语句可能会在某些分片上看到它的提交，但在其他分片上却没有。如果用户正在存储事件数据，他可能偶尔会观察到最近数据中的小间隙。如果这是一个问题，则由应用程序来处理(例如，从查询中排除最近的数据，或使用一些锁)。
 
-    If COPY fails to open a connection for a shard placement then it behaves in the same way as INSERT, namely to mark the placement(s) as inactive unless there are no more active placements. If any other failure occurs after connecting, the transaction is rolled back and thus no metadata changes are made.
+    如果COPY语句连接分片位置失败，则其行为方式与INSERT相同，即将位置标记为非活动状态，除非没有更多活动位置。如果在连接后发生任何其他故障，则回滚事务，因此不会进行元数据更改。
 
 .. _rollups:
 
-Caching Aggregations with Rollups
-=================================
+使用汇总缓存聚合
+===============
 
-Applications like event data pipelines and real-time dashboards require sub-second queries on large volumes of data. One way to make these queries fast is by calculating and saving aggregates ahead of time. This is called "rolling up" the data and it avoids the cost of processing raw data at run-time. As an extra benefit, rolling up timeseries data into hourly or daily statistics can also save space. Old data may be deleted when its full details are no longer needed and aggregates suffice.
+事件数据管道和实时仪表板等应用程序需要对大量数据进行亚秒级查询。快速进行这些查询的一种方法是提前计算和保存聚合。这称为“卷起”数据，它避免了在运行时处理原始数据的成本。作为额外的好处，将时间序列数据汇总为每小时或每日统计数据也可以节省空间。当不再需要完整的详细信息并且聚合就足够时，可能会删除旧数据。
 
-For example, here is a distributed table for tracking page views by url:
+例如，这是一个用于通过url跟踪页面视图的分布式表：
 
 .. code-block:: postgresql
 
@@ -101,20 +101,21 @@ For example, here is a distributed table for tracking page views by url:
 
   SELECT create_distributed_table('page_views', 'site_id');
 
-Once the table is populated with data, we can run an aggregate query to count page views per URL per day, restricting to a given site and year.
+一旦表中填充了数据，我们就可以运行聚合查询来计算每天每个URL的页面访问量，并将其限制在给定的站点和年份。
 
 .. code-block:: postgresql
 
-  -- how many views per url per day on site 5?
+  -- 网站5每天每个网址的访问次数是多少？
   SELECT view_time::date AS day, site_id, url, count(*) AS view_count
     FROM page_views
     WHERE site_id = 5 AND
       view_time >= date '2016-01-01' AND view_time < date '2017-01-01'
     GROUP BY view_time::date, site_id, url;
 
-The setup described above works, but has two drawbacks. First, when you repeatedly execute the aggregate query, it must go over each related row and recompute the results for the entire data set. If you're using this query to render a dashboard, it's faster to save the aggregated results in a daily page views table and query that table. Second, storage costs will grow proportionally with data volumes and the length of queryable history. In practice, you may want to keep raw events for a short time period and look at historical graphs over a longer time window.
+上面描述的设置可以工作，但是有两个缺点。首先，当您重复执行聚合查询时，它必须遍历每个相关行并重新计算整个数据集的结果。如果您使用此查询呈现仪表板，则可以将聚合结果保存在每日页面视图表中并查询该表会更快。
+其次，存储成本将与数据量和可查询历史记录的长度成比例增长。实际上，您可能希望在短时间内保留原始事件，并查看较长时间窗口中的历史图表。
 
-To receive those benefits, we can create a :code:`daily_page_views` table to store the daily statistics.
+为了获得这些好处，我们可以创建一个:code:`daily_page_views`表来存储每日统计数据。
 
 .. code-block:: postgresql
 
@@ -128,9 +129,9 @@ To receive those benefits, we can create a :code:`daily_page_views` table to sto
 
   SELECT create_distributed_table('daily_page_views', 'site_id');
 
-In this example, we distributed both :code:`page_views` and :code:`daily_page_views` on the :code:`site_id` column. This ensures that data corresponding to a particular site will be :ref:`co-located <colocation>` on the same node. Keeping the two tables' rows together on each node minimizes network traffic between nodes and enables highly parallel execution.
+在这个例子中，我们都在:code:`site_id`列上分布:code:`page_views`和:code:`daily_page_views`。这确保了与特定站点相对应的数据将:ref:`co-located <colocation>`同一节点上。在每个节点上将两个表的行保持在一起可以最大限度地减少节点之间的网络流量，并实现高度并行执行。
 
-Once we create this new distributed table, we can then run :code:`INSERT INTO ... SELECT` to roll up raw page views into the aggregated table. In the following, we aggregate page views each day. Citus users often wait for a certain time period after the end of day to run a query like this, to accommodate late arriving data.
+一旦我们创建了这个新的分布式表，我们就可以运行:code:`INSERT INTO ... SELECT`将原始页面视图汇总到聚合表中。在下文中，我们每天聚合页面视图。Citus用户经常在一天结束后等待一段时间来运行这样的查询，以适应迟到的数据。
 
 .. code-block:: postgresql
 
@@ -147,14 +148,14 @@ Once we create this new distributed table, we can then run :code:`INSERT INTO ..
     WHERE site_id = 5 AND
       day >= date '2016-01-01' AND day < date '2017-01-01';
 
-The rollup query above aggregates data from the previous day and inserts it into :code:`daily_page_views`. Running the query once each day means that no rollup tables rows need to be updated, because the new day's data does not affect previous rows.
+上面的汇总查询聚合了前一天的数据并将其插入:code:`daily_page_views`。每天运行一次查询意味着不需要更新汇总表行，因为新日期的数据不会影响以前的行。
 
-The situation changes when dealing with late arriving data, or running the rollup query more than once per day. If any new rows match days already in the rollup table, the matching counts should increase. PostgreSQL can handle this situation with "ON CONFLICT," which is its technique for doing `upserts <https://www.postgresql.org/docs/current/static/sql-insert.html#SQL-ON-CONFLICT>`_. Here is an example.
+处理延迟到达的数据或每天多次运行汇总查询时，情况会发生变化。如果任何新行与汇总表中已有的日期匹配，则匹配计数应该增加。PostgreSQL可以通过“ON CONFLICT”处理这种情况，这是它用于进行`upserts <https://www.postgresql.org/docs/current/static/sql-insert.html#SQL-ON-CONFLICT>`_的技术。这是一个例子。
 
 .. code-block:: postgresql
 
-  -- roll up from a given date onward,
-  -- updating daily page views when necessary
+  -- 从给定日期开始累积，
+  -- 在必要时更新每日页面视图
   INSERT INTO daily_page_views (day, site_id, url, view_count)
     SELECT view_time::date AS day, site_id, url, count(*) AS view_count
     FROM page_views
@@ -163,10 +164,10 @@ The situation changes when dealing with late arriving data, or running the rollu
     ON CONFLICT (day, url, site_id) DO UPDATE SET
       view_count = daily_page_views.view_count + EXCLUDED.view_count;
 
-Updates and Deletion
---------------------
+更新和删除
+----------
 
-You can update or delete rows from your distributed tables using the standard PostgreSQL `UPDATE <http://www.postgresql.org/docs/current/static/sql-update.html>`_ and `DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_ commands.
+您可以使用标准PostgreSQL `UPDATE <http://www.postgresql.org/docs/current/static/sql-update.html>`_和`DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_命令更新或删除分布式表中的行。
 
 .. code-block:: sql
 
@@ -177,29 +178,29 @@ You can update or delete rows from your distributed tables using the standard Po
     SET event_public = TRUE
     WHERE (org->>'id')::int = 5430905;
 
-When updates/deletes affect multiple shards as in the above example, Citus defaults to using a one-phase commit protocol. For greater safety you can enable two-phase commits by setting
+当更新/删除影响多个分片时，如上例所示，Citus默认使用单阶段提交协议。为了更加安全，您可以通过设置启用两阶段提交
 
 .. code-block:: postgresql
 
   SET citus.multi_shard_commit_protocol = '2pc';
 
-If an update or delete affects only a single shard then it runs within a single worker node. In this case enabling 2PC is unnecessary. This often happens when updates or deletes filter by a table's distribution column:
+如果更新或删除仅影响单个分片，则它将在单个工作节点内运行。在这种情况下，不需要启用2PC。当更新或删除按表的分布列过滤时，通常会发生这种情况：
 
 .. code-block:: postgresql
 
-  -- since github_events is distributed by repo_id,
-  -- this will execute in a single worker node
+  -- 由于github_events由repo_id分发，
+  -- 这将在单个工作节点中执行
 
   DELETE FROM github_events
   WHERE repo_id = 206084;
 
-Furthermore, when dealing with a single shard, Citus supports ``SELECT … FOR UPDATE``. This is a technique sometimes used by object-relational mappers (ORMs) to safely:
+此外，在处理单个分片时，Citus支持``SELECT … FOR UPDATE``。这是一种有时由对象关系映射器（ORM）用于安全的技术：
 
-1. load rows
-2. make a calculation in application code
-3. update the rows based on calculation
+1. 加载行
+2. 在应用程序代码中进行计算
+3. 根据计算更新行
 
-Selecting the rows for update puts a write lock on them to prevent other processes from causing a "lost update" anomaly.
+选择要更新的行会对它们设置写入锁，以防止其他进程导致“丢失的更新”异常。
 
 .. code-block:: sql
 
@@ -222,9 +223,9 @@ Selecting the rows for update puts a write lock on them to prevent other process
 
   COMMIT;
 
-This feature is supported for hash distributed and reference tables only, and only those that have a :ref:`replication_factor <replication_factor>` of 1.
+这个特性只支持散列分布表和引用表，并且只支持那些:ref:`replication_factor <replication_factor>`为1的表。
 
-Maximizing Write Performance
-----------------------------
+最大化写入性能
+-------------
 
-Both INSERT and UPDATE/DELETE statements can be scaled up to around 50,000 queries per second on large machines. However, to achieve this rate, you will need to use many parallel, long-lived connections and consider how to deal with locking. For more information, you can consult the :ref:`scaling_data_ingestion` section of our documentation.
+在大型计算机上，INSERT和UPDATE/DELETE语句都可以扩展到每秒大约50,000个查询。但是，要实现此速率，您需要使用许多并行，长连接并考虑如何处理锁定。有关更多信息，请参阅我们文档中的:ref:`scaling_data_ingestion`部分。
