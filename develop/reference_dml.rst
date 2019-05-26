@@ -45,7 +45,7 @@
 "From Select"子句（分布式汇总）
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Citus还支持``INSERT … SELECT``语句 - 根据选择查询的结果插入行。这是一种填充表的便捷方式，也允许使用``ON CONFLICT<https://yq.aliyun.com/articles/74419>`_``子句“upserts”，这是执行分布式汇总的最简单方法。
+Citus还支持``INSERT … SELECT``语句 - 根据选择查询的结果插入行。这是一种填充表的便捷方式，也允许使用`ON CONFLICT<https://yq.aliyun.com/articles/74419>`_子句“upserts”，这是执行分布式汇总的最简单方法。
 
 在Citus中，有两种方法可以从select语句中插入。第一种是如果源表和目标表是:ref:`共址 <colocation>`，并且select/insert语句都包括分布列。在这种情况下，Citus可以将``INSERT … SELECT``语句推送到所有节点上并行执行。
 
@@ -58,7 +58,7 @@ Citus还支持``INSERT … SELECT``语句 - 根据选择查询的结果插入行
 COPY命令（批量加载）
 ~~~~~~~~~~~~~~~~~~~
 
-要批量加载文件中的数据，可以直接使用`PostgreSQL的 \\COPY命令 <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_.。
+要批量加载文件中的数据，可以直接使用`PostgreSQL的 \\`COPY命令 <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_.。
 
 首先通过运行以下命令下载我们的示例github_events数据集：
 

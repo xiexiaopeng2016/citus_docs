@@ -299,7 +299,7 @@ Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current
 .. code-block:: postgres
 
    -- 我们在这里使用“text”列类型，但是一个真正的应用程序
-   -- 可能使用postgres contrib模块中提供的“citext<https://www.postgresql.org/docs/current/citext.html>`_”
+   -- 可能使用postgres contrib模块中提供的`citext<https://www.postgresql.org/docs/current/citext.html>`_
 
    CREATE TABLE users ( email text PRIMARY KEY );
    SELECT create_reference_table('users');

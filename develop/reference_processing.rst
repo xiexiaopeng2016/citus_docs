@@ -1,80 +1,80 @@
 .. _citus_query_processing:
 
-Query Processing
-================
+查询处理
+========
 
-A Citus cluster consists of a coordinator instance and multiple worker instances. The data is sharded and replicated on the workers while the coordinator stores metadata about these shards. All queries issued to the cluster are executed via the coordinator. The coordinator partitions the query into smaller query fragments where each query fragment can be run independently on a shard. The coordinator then assigns the query fragments to workers, oversees their execution, merges their results, and returns the final result to the user. The query processing architecture can be described in brief by the diagram below.
+Citus集群由一个协调器实例和多个工作者实例组成。当协调器存储有关这些分片的元数据时，数据被分片并复制到工作者上。向集群发出的所有查询都通过协调器执行。协调器将查询划分为较小的查询片段，其中每个查询片段都可以在一个分片上独立运行。然后协调器将查询片段分配给工作者，监视它们的执行，合并它们的结果，并将最终结果返回给用户。查询处理体系结构可以通过下图进行简要描述。
 
 .. image:: ../images/citus-high-level-arch.png
 
-Citus’s query processing pipeline involves the two components:
+Citus的查询处理管道包括两个组件:
 
-* **Distributed Query Planner and Executor**
-* **PostgreSQL Planner and Executor**
+* **分布式查询规划器和执行器**
+* **PostgreSQL查询规划器和执行器**
 
-We discuss them in greater detail in the subsequent sections.
+我们将在后续章节中更详细地讨论它们。
 
 .. _distributed_query_planner:
 
-Distributed Query Planner
--------------------------
+分布式查询规划器
+---------------
 
-Citus’s distributed query planner takes in a SQL query and plans it for distributed execution.
+Citus的分布式查询规划器接受SQL查询并规划分布式执行。
 
-For SELECT queries, the planner first creates a plan tree of the input query and transforms it into its commutative and associative form so it can be parallelized. It also applies several optimizations to ensure that the queries are executed in a scalable manner, and that network I/O is minimized.
+对于SELECT查询，计划程序首先创建输入查询的计划树，并将其转换为其可交换和关联形式，以便可以并行化。它还应用了多种优化，以确保以可伸缩的方式执行查询，并最大限度地减少网络I / O.
 
-Next, the planner breaks the query into two parts - the coordinator query which runs on the coordinator and the worker query fragments which run on individual shards on the workers. The planner then assigns these query fragments to the workers such that all their resources are used efficiently. After this step, the distributed query plan is passed on to the distributed executor for execution.
+接下来，规划器将查询分为两部分 - 在协调器上运行的协调器查询和在工作者上的各个分片上运行的工作程序查询片段。然后，规划器将这些查询片段分配给工作者，以便有效地使用它们的所有资源。在此步骤之后，将分布式查询计划传递给分布式执行器执行
 
-The planning process for key-value lookups on the distribution column or modification queries is slightly different as they hit exactly one shard. Once the planner receives an incoming query, it needs to decide the correct shard to which the query should be routed. To do this, it extracts the distribution column in the incoming row and looks up the metadata to determine the right shard for the query. Then, the planner rewrites the SQL of that command to reference the shard table instead of the original table. This re-written plan is then passed to the distributed executor.
+对于在分布列上的键值查找或修改查询的规划过程略有不同，因为它们只命中一个切分。规划器一旦接收到传入查询，就需要决定将查询路由到正确的切分。分发列或修改查询上的键值查找的规划过程略有不同，因为它们只针对一个分片。计划程序收到传入查询后，需要确定应将查询路由到的正确分片。为此，它将提取传入行中的分发列，并查找元数据以确定查询的正确分片。然后，规划器重写该命令的SQL以引用分片表而不是原始表。然后将此重写的计划传递给分布式执行程序。
 
 .. _distributed_query_executor:
 
-Distributed Query Executor
---------------------------
+分布式查询执行器
+---------------
 
-Citus’s distributed executors run distributed query plans and handle failures that occur during query execution. The executors connect to the workers, send the assigned tasks to them and oversee their execution. If the executor cannot assign a task to the designated worker or if a task execution fails, then the executor dynamically re-assigns the task to replicas on other workers. The executor processes only the failed query sub-tree, and not the entire query while handling failures.
+Citus的分布式执行器运行分布式查询计划，并处理查询执行过程中发生的故障。执行程序连接到工作者，将分配的任务发送给它们并监督它们的执行。如果执行程序无法将任务分配给指定的工作者，或者任务执行失败，则执行程序会动态地将任务分配给其他工作节点上的副本。执行程序在处理故障时仅处理失败的查询子树，而不处理整个查询。
 
-Citus has three basic executor types: real time, router, and task tracker. It chooses which to use dynamically, depending on the structure of each query, and can use more than one at once for a single query, assigning different executors to different subqueries/CTEs as needed to support the SQL functionality. This process is recursive: if Citus cannot determine how to run a subquery then it examines sub-subqueries.
+Citus有三种基本的执行器类型：实时，路由器和任务跟踪器。它根据每个查询的结构选择动态使用哪个，并且可以在一次查询中使用多个，根据需要为不同的子查询/`CTEs<https://www.postgresql.org/docs/current/queries-with.html>`_分配不同的执行程序以支持SQL功能。这个过程是递归的：如果Citus无法确定如何运行子查询，那么它会检查子子查询。
 
-At a high level, the real-time executor is useful for handling simple key-value lookups and INSERT, UPDATE, and DELETE queries. The task tracker is better suited for larger SELECT queries, and the router executor for access data that is co-located in a single worker node.
+在高层次上，实时执行器对于处理简单的键值查找和INSERT，UPDATE和DELETE查询非常有用。任务跟踪器更适合较大的SELECT查询，以及路由器执行程序用于访问位于同一位置的单个工作者的数据。
 
-The choice of executor for each query can be displayed by running PostgreSQL's `EXPLAIN <https://www.postgresql.org/docs/current/static/sql-explain.html>`_ command. This can be useful for debugging performance issues.
+可以通过运行PostgreSQL的`EXPLAIN <https://www.postgresql.org/docs/current/static/sql-explain.html>`_命令来显示每个查询的执行程序的选择。这对调试性能问题很有用。
 
 .. _realtime_executor:
 
-Real-time Executor
-~~~~~~~~~~~~~~~~~~~
+实时执行器
+~~~~~~~~~~
 
-The real-time executor is the default executor used by Citus. It is well suited for getting fast responses to queries involving filters, aggregations and co-located joins. The real time executor opens one connection per shard to the workers and sends all fragment queries to them. It then fetches the results from each fragment query, merges them, and gives the final results back to the user.
+实时执行器是Citus默认使用的执行器。它非常适合快速响应涉及过滤器，聚合和共址联接的查询。实时执行程序为每个分片打开一个与工作者的连接，并将所有查询片段发送给它们。然后，它从每个查询片段中获取结果，合并它们，并将最终结果返回给用户
 
-Since the real time executor maintains an open connection for each shard to which it sends queries, it may reach file descriptor / connection limits while dealing with high shard counts. In such cases, the real-time executor throttles on assigning more tasks to workers to avoid overwhelming them with too many tasks. One can typically increase the file descriptor limit on modern operating systems to avoid throttling, and change Citus configuration to use the real-time executor. But, that may not be ideal for efficient resource management while running complex queries. For queries that touch thousands of shards or require large table joins, you can use the task tracker executor.
+由于实时执行程序为其发送查询的每个分片维护一个开放连接，因此在处理大量分片时，它可能达到文件描述符/连接限制。在这种情况下，实时执行程序会限制为工作者分配更多任务，以避免因任务太多而压倒他们。通常可以增加现代操作系统上的文件描述符限制以避免限制，并将Citus配置更改为使用实时执行程序。但是，在运行复杂查询时，这可能不是理想的有效资源管理。对于涉及数千个分片或需要大表连接的查询，您可以使用任务跟踪器执行程序。
 
-Furthermore, when the real time executor detects simple INSERT, UPDATE or DELETE queries it assigns the incoming query to the worker which has the target shard. The query is then handled by the worker PostgreSQL server and the results are returned back to the user. In case a modification fails on a shard replica, the executor marks the corresponding shard replica as invalid in order to maintain data consistency.
+此外，当实时执行程序检测到简单的INSERT，UPDATE或DELETE查询时，它会将传入的查询分配给具有目标分片的工作者。然后由工作者PostgreSQL服务器处理该查询，并将结果返回给用户。如果对分片副本的修改失败，执行程序将相应的分片副本标记为无效，以保持数据一致性。
 
 .. _router_executor:
 
-Router Executor
-~~~~~~~~~~~~~~~
+路由执行器
+~~~~~~~~~
 
-When all data required for a query is stored on a single node, Citus can route the entire query to the node and run it there. The result set is then relayed through the coordinator node back to the client. The router executor takes care of this type of execution.
+当查询所需的所有数据都存储在单个节点上时，Citus可以将整个查询路由到该节点并在那里运行。然后，通过协调者将结果集转发回客户端。路由器执行器负责这种类型的执行。
 
-Although Citus supports a large percentage of SQL functionality even for cross-node queries, the advantage of router execution is 100% SQL coverage. Queries executing inside a node are run in a full-featured PostgreSQL worker instance. The disadvantage of router execution is the reduced parallelism of executing a query using only one computer.
+虽然Citus支持大部分SQL功能，即使是跨节点查询，但路由器执行的优势在于100％的SQL覆盖率。在节点内执行的查询在功能齐全的PostgreSQL工作者实例中运行。路由器执行的缺点是只使用一台计算机执行查询的并行性降低。
 
-Task Tracker Executor
-~~~~~~~~~~~~~~~~~~~~~~
+任务跟踪执行器
+~~~~~~~~~~~~~
 
-The task tracker executor is well suited for long running, complex data warehousing queries. This executor opens only one connection per worker, and assigns all fragment queries to a task tracker daemon on the worker. The task tracker daemon then regularly schedules new tasks and sees through their completion. The executor on the coordinator regularly checks with these task trackers to see if their tasks completed.
+任务跟踪器执行程序非常适合长时间运行的复杂数据仓库查询。此执行程序仅为每个工作者打开一个连接，并将所有片段查询分配给工作者上的任务跟踪器守护程序。然后，任务跟踪器守护程序会定期安排新任务并查看完成情况。协调者的执行器定期检查这些任务跟踪器，看看他们的任务是否完成。
 
-Each task tracker daemon on the workers also makes sure to execute at most citus.max_running_tasks_per_node concurrently. This concurrency limit helps in avoiding disk I/O contention when queries are not served from memory. The task tracker executor is designed to efficiently handle complex queries which require repartitioning and shuffling intermediate data among workers.
+工作者上的每个任务跟踪器守护程序也确保同时执行最多citus.max_running_tasks_per_node个任务。当查询不是从内存中提供时，这种并发限制有助于避免磁盘I/O争用。任务跟踪执行程序的设计目的是有效地处理复杂的查询，这些查询需要在工作者之间重新分区和重排中间数据。
 
 .. _push_pull_execution:
 
-Subquery/CTE Push-Pull Execution
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+子查询/CTE推拉执行
+~~~~~~~~~~~~~~~~~
 
-If necessary Citus can gather results from subqueries and CTEs into the coordinator node and then push them back across workers for use by an outer query. This allows Citus to support a greater variety of SQL constructs, and even mix executor types between a query and its subqueries.
+如有必要，Citus可以将子查询和CTE的结果收集到协调者中，然后将它们推送回工作者以供外部查询使用。这允许Citus支持更多种类的SQL构造，甚至可以在查询及其子查询之间混合执行程序类型。
 
-For example, having subqueries in a WHERE clause sometimes cannot execute inline at the same time as the main query, but must be done separately. Suppose a web analytics application maintains a ``visits`` table partitioned by ``page_id``. To query the number of visitor sessions on the top twenty most visited pages, we can use a subquery to find the list of pages, then an outer query to count the sessions.
+例如，在WHERE子句中具有子查询有时不能与主查询同时执行内联，而必须单独完成。假设Web分析应用程序维护一个使用``page_id``分区的表``visits``。要查询访问次数最多的前20个页面上的访问会话的数量，我们可以使用子查询来查找页面列表，然后使用外部查询来计数会话。
 
 .. code-block:: sql
 
@@ -89,9 +89,9 @@ For example, having subqueries in a WHERE clause sometimes cannot execute inline
   )
   GROUP BY page_id;
 
-The real-time executor would like to run a fragment of this query against each shard by page_id, counting distinct session_ids, and combining the results on the coordinator. However the LIMIT in the subquery means the subquery cannot be executed as part of the fragment. By recursively planning the query Citus can run the subquery separately, push the results to all workers, run the main fragment query, and pull the results back to the coordinator. The "push-pull" design supports a subqueries like the one above.
+实时执行程序希望根据page_id针对每个分片运行此查询的一个片段，计算不同的session_id，并在协调者上组合结果。但是，子查询中的LIMIT意味着子查询不能作为片段的一部分执行。通过递归计划查询，Citus可以单独运行子查询，将结果推送给所有工作者，运行主片段查询，并将结果拉回协调器。“推拉式”设计支持如上所述的子查询。
 
-Let's see this in action by reviewing the `EXPLAIN <https://www.postgresql.org/docs/current/static/sql-explain.html>`_ output for this query. It's fairly involved:
+让我们通过查看此查询的`EXPLAIN <https://www.postgresql.org/docs/current/static/sql-explain.html>`_输出来查看此操作。它相当复杂：
 
 ::
 
@@ -131,7 +131,7 @@ Let's see this in action by reviewing the `EXPLAIN <https://www.postgresql.org/d
                   Group Key: intermediate_result.page_id
                   ->  Function Scan on read_intermediate_result intermediate_result  (cost=0.00..10.00 rows=1000 width=4)
 
-Let's break it apart and examine each piece.
+让我们把它拆开，并检查每一块。
 
 ::
 
@@ -140,7 +140,7 @@ Let's break it apart and examine each piece.
     ->  Sort  (cost=0.00..0.00 rows=0 width=0)
       Sort Key: remote_scan.page_id
 
-The root of the tree is what the coordinator node does with the results from the workers. In this case it is grouping them, and GroupAggregate requires they be sorted first.
+树的根是协调者对工作者的结果所做的。在这种情况下，它将它们分组，GroupAggregate要求首先对它们进行排序。
 
 ::
 
@@ -148,7 +148,7 @@ The root of the tree is what the coordinator node does with the results from the
         ->  Distributed Subplan 6_1
   .
 
-The custom scan has two large sub-trees, starting with a "distributed subplan."
+自定义扫描有两个大的子树，从“分布式子计划”开始。
 
 ::
 
@@ -170,7 +170,7 @@ The custom scan has two large sub-trees, starting with a "distributed subplan."
                           ->  Seq Scan on visits_102264 visits  (cost=0.00..509.17 rows=33017 width=4)
   .
 
-Worker nodes run the above for each of the thirty-two shards (Citus is choosing one representative for display). We can recognize all the pieces of the ``IN (…)`` subquery: the sorting, grouping and limiting. When all workers have completed this query, they send their output back to the coordinator which puts it together as "intermediate results."
+工作节点为32个分片中的每一个运行上面的内容（Citus选择一个代表进行显示）。我们可以识别``IN (…)``子查询的所有部分：排序，分组和限制。当所有工作者完成此查询后，他们将其输出发送回协调者，协调者将其作为“中间结果”放在一起。
 
 ::
 
@@ -184,7 +184,7 @@ Worker nodes run the above for each of the thirty-two shards (Citus is choosing 
               Hash Cond: (visits.page_id = intermediate_result.page_id)
   .
 
-Citus starts another real-time job in this second subtree. It's going to count distinct sessions in visits. It uses a JOIN to connect with the intermediate results. The intermediate results will help it restrict to the top twenty pages.
+Citus在第二个子树中开始另一个实时工作。它将计算访问中的不同会话。它使用JOIN连接中间结果。中间结果将帮助它限制在前20页。
 
 ::
 
@@ -195,13 +195,13 @@ Citus starts another real-time job in this second subtree. It's going to count d
                   ->  Function Scan on read_intermediate_result intermediate_result  (cost=0.00..10.00 rows=1000 width=4)
   .
 
-The worker internally retrieves intermediate results using a ``read_intermediate_result`` function which loads data from a file that was copied in from the coordinator node.
+工作者使用一个``read_intermediate_result`函数在内部检索中间结果，该函数从协调器节点复制的文件中加载数据。
 
-This example showed how Citus executed the query in multiple steps with a distributed subplan, and how you can use EXPLAIN to learn about distributed query execution.
+此示例显示了Citus如何使用分布式子计划在多个步骤中执行查询，以及如何使用EXPLAIN来了解分布式查询执行。
 
 .. _postgresql_planner_executor:
 
-PostgreSQL planner and executor
---------------------------------
+PostgreSQL规划器和执行器
+-----------------------
 
-Once the distributed executor sends the query fragments to the workers, they are processed like regular PostgreSQL queries. The PostgreSQL planner on that worker chooses the most optimal plan for executing that query locally on the corresponding shard table. The PostgreSQL executor then runs that query and returns the query results back to the distributed executor. You can learn more about the PostgreSQL `planner <http://www.postgresql.org/docs/current/static/planner-optimizer.html>`_ and `executor <http://www.postgresql.org/docs/current/static/executor.html>`_ from the PostgreSQL manual. Finally, the distributed executor passes the results to the coordinator for final aggregation.
+一旦分布式执行程序将查询片段发送给工作者，它们就像常规的PostgreSQL查询一样处理。该工作者上的PostgreSQL规划器选择最佳的计划，以便在相应的分片表上本地执行该查询。然后，PostgreSQL执行器运行该查询并将查询结果返回给分布式执行器。您可以从PostgreSQL手册中了解有关PostgreSQL`规划器 <http://www.postgresql.org/docs/current/static/planner-optimizer.html>`_和`执行器 <http://www.postgresql.org/docs/current/static/executor.html>`_的更多信息。最后，分布式执行器将结果传递给协调者进行最终聚合。
