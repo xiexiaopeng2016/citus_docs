@@ -1,74 +1,77 @@
 .. _querying:
 
-Querying Distributed Tables (SQL)
-=================================
+查询分布式表（SQL）
+==================
 
-As discussed in the previous sections, Citus is an extension which extends the latest PostgreSQL for distributed execution. This means that you can use standard PostgreSQL `SELECT <http://www.postgresql.org/docs/current/static/sql-select.html>`_ queries on the Citus coordinator for querying. Citus will then parallelize the SELECT queries involving complex selections, groupings and orderings, and JOINs to speed up the query performance. At a high level, Citus partitions the SELECT query into smaller query fragments, assigns these query fragments to workers, oversees their execution, merges their results (and orders them if needed), and returns the final result to the user.
+正如前面部分所讨论的，Citus是一个扩展，它扩展了最新的PostgreSQL以实现分布式执行。
+这意味着您可以在Citus协调器上使用标准的PostgreSQL `SELECT <http://www.postgresql.org/docs/current/static/sql-select.html>`_查询进行查询。
+然后，Citus将并行化涉及复杂选择，分组和排序以及JOIN的SELECT查询，以加快查询性能。
+在较高的层次上，Citus将SELECT查询分区为较小的查询片段，将这些查询片段分配给工作节点，监督其执行，合并其结果（并在需要时对其进行排序），并将最终结果返回给用户。
 
-In the following sections, we discuss the different types of queries you can run using Citus.
+在以下部分中，我们将讨论可以使用Citus运行的不同类型的查询。
 
 .. _aggregate_functions:
 
-Aggregate Functions
--------------------
+聚合函数
+--------
 
-Citus supports and parallelizes most aggregate functions supported by PostgreSQL. Citus's query planner transforms the aggregate into its commutative and associative form so it can be parallelized. In this process, the workers run an aggregation query on the shards and the coordinator then combines the results from the workers to produce the final output.
+Citus支持和并行化PostgreSQL支持的大多数聚合函数。Citus的查询规划器将聚合转换为其可交换和关联形式，因此可以并行化。在此过程中，工作节点在分片上运行聚合查询，然后协调器将工作节点的结果组合在一起以生成最终输出。
 
 .. _count_distinct:
 
-Count (Distinct) Aggregates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Count (Distinct) 聚合
+~~~~~~~~~~~~~~~~~~~~~
 
-Citus supports count(distinct) aggregates in several ways. If the count(distinct) aggregate is on the distribution column, Citus can directly push down the query to the workers. If not, Citus runs select distinct statements on each worker, and returns the list to the coordinator where it obtains the final count.
+Citus以多种方式支持count(distinct)聚合。如果count(distinct)聚合在分发列上，Citus可以直接将查询下推到工作节点。如果没有，Citus会在每个工作节点上运行select distinct语句，并将列表返回给协调器，在协调器中获取最终计数。
 
-Note that transferring this data becomes slower when workers have a greater number of distinct items. This is especially true for queries containing multiple count(distinct) aggregates, e.g.:
+请注意，当工作人员拥有更多不同的项目时，传输此数据会变慢。对于包含多个count(distinct)聚合的查询尤其如此，例如：
 
 .. code-block:: sql
 
-  -- multiple distinct counts in one query tend to be slow
+  -- 一个查询中的多个distinct counts 往往是缓慢的
   SELECT count(distinct a), count(distinct b), count(distinct c)
   FROM table_abc;
 
 
-For these kind of queries, the resulting select distinct statements on the workers essentially produce a cross-product of rows to be transferred to the coordinator.
+对于这类查询，在工作节点上生成的select distinct语句本质上生成要传输给协调器的行的交叉乘积。
 
-For increased performance you can choose to make an approximate count instead. Follow the steps below:
+为了提高性能，您可以选择进行近似计数。请按照以下步骤操作：
 
-1. Download and install the hll extension on all PostgreSQL instances (the coordinator and all the workers).
+1. 在所有PostgreSQL实例（协调器和所有工作者）上下载并安装hll扩展。
 
-   Please visit the PostgreSQL hll `github repository <https://github.com/citusdata/postgresql-hll>`_ for specifics on obtaining the extension.
+   请访问PostgreSQL hll `github存储库 <https://github.com/citusdata/postgresql-hll>`_以获取有关获取扩展的详细信息。
 
-2. Create the hll extension on all the PostgreSQL instances
+2. 在所有PostgreSQL实例上创建hll扩展
 
   .. code-block:: postgresql
 
     CREATE EXTENSION hll;
 
-3. Enable count distinct approximations by setting the Citus.count_distinct_error_rate configuration value. Lower values for this configuration setting are expected to give more accurate results but take more time for computation. We recommend setting this to 0.005.
+3. 通过设置Citus.count_distinct_error_rate配置值启用计数不同的近似值。此配置设置的较低值预计会提供更准确的结果，但需要更多时间进行计算。我们建议将其设置为0.005。
 
   .. code-block:: postgresql
 
     SET citus.count_distinct_error_rate to 0.005;
 
-  After this step, count(distinct) aggregates automatically switch to using HLL, with no changes necessary to your queries. You should be able to run approximate count distinct queries on any column of the table.
+  在此步骤之后，count(distinct)聚合会自动切换到使用HLL，而不需要对查询进行任何更改。您应该能够在表的任何列上运行近似count distinct查询。
 
-HyperLogLog Column
-$$$$$$$$$$$$$$$$$$
+HyperLogLog列
+$$$$$$$$$$$$$
 
-Certain users already store their data as HLL columns. In such cases, they can dynamically roll up those data by calling hll_union_agg(hll_column).
+某些用户已将其数据存储为HLL列。在这种情况下，他们可以通过调用hll_union_agg（hll_column）动态地汇总这些数据。
 
 .. _topn:
 
-Estimating Top N Items
-~~~~~~~~~~~~~~~~~~~~~~
+估计前N项
+~~~~~~~~~
 
-Calculating the first *n* elements in a set by applying count, sort, and limit is simple. However as data sizes increase, this method becomes slow and resource intensive. It's more efficient to use an approximation.
+通过应用计数，排序和限制来计算集合中的前*n*个元素很简单。但是，随着数据大小的增加，此方法变得缓慢且资源密集。使用近似值更有效。
 
-The open source `TopN extension <https://github.com/citusdata/postgresql-topn>`_ for Postgres enables fast approximate results to "top-n" queries. The extension materializes the top values into a JSON data type. TopN can incrementally update these top values, or merge them on-demand across different time intervals.
+Postgres的开源`TopN 扩展 <https://github.com/citusdata/postgresql-topn>`_可以快速获得“top-n”查询的近似结果。扩展将top值实现为JSON数据类型。TopN可以逐步更新这些最高值，或者在不同的时间间隔内按需合并它们。
 
-**Basic Operations**
+**基本操作**
 
-Before seeing a realistic example of TopN, let's see how some of its primitive operations work. First ``topn_add`` updates a JSON object with counts of how many times a key has been seen:
+在看到一个真实的TopN示例之前，让我们看看它的一些原始操作是如何工作的。首先``topn_add``更新一个JSON对象，其中包含一个被看到的次数的键：
 
 .. code-block:: postgres
 
@@ -80,7 +83,7 @@ Before seeing a realistic example of TopN, let's see how some of its primitive o
   select topn_add(topn_add('{}', 'a'), 'a');
   -- => {"a": 2}
 
-The extension also provides aggregations to scan multiple values:
+该扩展还提供聚合以扫描多个值：
 
 .. code-block:: postgres
 
@@ -92,18 +95,18 @@ The extension also provides aggregations to scan multiple values:
     FROM normal_rand(1000, 5, 0.7) i;
   -- => {"2": 1, "3": 74, "4": 420, "5": 425, "6": 77, "7": 3}
 
-If the number of distinct values crosses a threshold, the aggregation drops information for those seen least frequently. This keeps space usage under control. The threshold can be controlled by the ``topn.number_of_counters`` GUC. Its default value is 1000.
+如果不同值的数量超过阈值，则聚合会丢弃最不常见的信息。这可以控制空间使用。阈值可以由``topn.number_of_counters` GUC 控制。其默认值为1000。
 
-**Realistic Example**
+**现实的例子**
 
-Now onto a more realistic example of how TopN works in practice. Let's ingest Amazon product reviews from the year 2000 and use TopN to query it quickly. First download the dataset:
+现在谈谈TopN如何在实践中运作的更现实的例子。让我们从2000年开始收集亚马逊产品评论，并使用TopN快速查询。首先下载数据集：
 
 .. code-block:: bash
 
   curl -L https://examples.citusdata.com/customer_reviews_2000.csv.gz | \
     gunzip > reviews.csv
 
-Next, ingest it into a distributed table:
+接下来，将其摄取到分布式表中：
 
 .. code-block:: psql
 
@@ -127,7 +130,7 @@ Next, ingest it into a distributed table:
 
   \COPY customer_reviews FROM 'reviews.csv' WITH CSV
 
-Next we'll add the extension, create a destination table to store the json data generated by TopN, and apply the ``topn_add_agg`` function we saw previously.
+接下来我们将添加扩展，创建一个目标表来存储由TopN生成的json数据，并应用我们之前看到的函数``topn_add_agg``。
 
 .. code-block:: postgresql
 
@@ -150,7 +153,7 @@ Next we'll add the extension, create a destination table to store the json data 
     FROM customer_reviews
     GROUP BY review_date;
 
-Now, rather than writing a complex window function on ``customer_reviews``, we can simply apply TopN to ``reviews_by_day``. For instance, the following query finds the most frequently reviewed product for each of the first five days:
+现在，我们不需要在``customer_reviews``上编写复杂的窗口函数，只需将TopN应用于``reviews_by_day``即可。例如，以下查询查找前五天中每个最常查看的产品：
 
 .. code-block:: postgres
 
@@ -161,18 +164,18 @@ Now, rather than writing a complex window function on ``customer_reviews``, we c
 
 ::
 
-  ┌─────────────┬────────────┬───────────┐
-  │ review_date │    item    │ frequency │
-  ├─────────────┼────────────┼───────────┤
-  │ 2000-01-01  │ 0939173344 │        12 │
-  │ 2000-01-02  │ B000050XY8 │        11 │
-  │ 2000-01-03  │ 0375404368 │        12 │
-  │ 2000-01-04  │ 0375408738 │        14 │
-  │ 2000-01-05  │ B00000J7J4 │        17 │
-  └─────────────┴────────────┴───────────┘
+  ┌───────────────┬──────┬───────────┐
+  │ review_date │    item     │ frequency  │
+  ├───────────────┼──────┼───────────┤
+  │ 2000-01-01  │ 0939173344  │        12  │
+  │ 2000-01-02  │ B000050XY8  │        11  │
+  │ 2000-01-03  │ 0375404368  │        12  │
+  │ 2000-01-04  │ 0375408738  │        14  │
+  │ 2000-01-05  │ B00000J7J4  │        17  │
+  └───────────────┴──────┴───────────┘
 
 
-The json fields created by TopN can be merged with ``topn_union`` and ``topn_union_agg``. We can use the latter to merge the data for the entire first month and list the five most reviewed products during that period.
+TopN创建的json字段可以与``topn_union``和``topn_union_agg``合并。我们可以使用后者来合并整个第一个月的数据，并列出在此期间最受关注的五个产品。
 
 .. code-block:: postgres
 
@@ -185,70 +188,70 @@ The json fields created by TopN can be merged with ``topn_union`` and ``topn_uni
 
   ┌────────────┬───────────┐
   │    item    │ frequency │
-  ├────────────┼───────────┤
+  ├─────────────┼──────────┤
   │ 0375404368 │       217 │
   │ 0345417623 │       217 │
   │ 0375404376 │       217 │
   │ 0375408738 │       217 │
   │ 043936213X │       204 │
-  └────────────┴───────────┘
+  └─────────────┴──────────┘
 
-For more details and examples see the `TopN readme <https://github.com/citusdata/postgresql-topn/blob/master/README.md>`_.
+有关更多详细信息和示例，请参阅`TopN 自述文件 <https://github.com/citusdata/postgresql-topn/blob/master/README.md>`_。
 
 .. _limit_pushdown:
 
-Limit Pushdown
----------------------
+限制下推
+--------
 
-Citus also pushes down the limit clauses to the shards on the workers wherever possible to minimize the amount of data transferred across network.
+Citus还尽可能地将limit子句下放到工作节点的分片上，以最大限度地减少通过网络传输的数据量。
 
-However, in some cases, SELECT queries with LIMIT clauses may need to fetch all rows from each shard to generate exact results. For example, if the query requires ordering by the aggregate column, it would need results of that column from all shards to determine the final aggregate value. This reduces performance of the LIMIT clause due to high volume of network data transfer. In such cases, and where an approximation would produce meaningful results, Citus provides an option for network efficient approximate LIMIT clauses.
+但是，在某些情况下，使用LIMIT子句的SELECT查询可能需要从每个分片中获取所有行以生成精确结果。例如，如果查询需要按聚合列排序，则需要所有分片中该列的结果来确定最终聚合值。由于大量的网络数据传输，这降低了LIMIT子句的性能。在这种情况下，当近似将产生有意义的结果时，Citus为网络有效近似LIMIT子句提供了一个选项。
 
-LIMIT approximations are disabled by default and can be enabled by setting the configuration parameter citus.limit_clause_row_fetch_count. On the basis of this configuration value, Citus will limit the number of rows returned by each task for aggregation on the coordinator. Due to this limit, the final results may be approximate. Increasing this limit will increase the accuracy of the final results, while still providing an upper bound on the number of rows pulled from the workers.
+默认情况下LIMIT近似值是禁用的，可以通过设置配置参数citus.limit_clause_row_fetch_count来启用LIMIT近似值。根据这个配置值，Citus将限制每个任务返回的行数，以便在协调器上进行聚合。由于此限制，最终结果可能是近似值。增加这个限制将提高最终结果的准确性，同时仍然提供从工作节点中提取的行数的上限。
 
 .. code-block:: postgresql
 
     SET citus.limit_clause_row_fetch_count to 10000;
 
-Views on Distributed Tables
----------------------------
+分布式表的视图
+-------------
 
-Citus supports all views on distributed tables. For an overview of views' syntax and features, see the PostgreSQL documentation for `CREATE VIEW <https://www.postgresql.org/docs/current/static/sql-createview.html>`_.
+Citus支持分布式表的所有视图。有关视图语法和功能的概述，请参阅`CREATE VIEW <https://www.postgresql.org/docs/current/static/sql-createview.html>`_的PostgreSQL文档。
 
-Note that some views cause a less efficient query plan than others. For more about detecting and improving poor view performance, see :ref:`subquery_perf`. (Views are treated internally as subqueries.)
+请注意，某些视图导致查询计划效率低于其他视图。有关检测和改善较差视图性能的更多信息，请参阅:ref:`subquery_perf`。（视图在内部被视为子查询。）
 
-Citus supports materialized views as well, and stores them as local tables on the coordinator node. Using them in distributed queries after materialization requires wrapping them in a subquery, a technique described in :ref:`join_local_dist`.
+Citus也支持物化视图，并将它们作为本地表存储在协调器节点上。在实现之后在分布式查询中使用它们需要将它们包装在子查询中，这是一种在:ref:`join_local_dist`中描述的技术。
 
 .. _joins:
 
 Joins
 -----
 
-Citus supports equi-JOINs between any number of tables irrespective of their size and distribution method. The query planner chooses the optimal join method and join order based on how tables are distributed. It evaluates several possible join orders and creates a join plan which requires minimum data to be transferred across network.
+Citus支持任意数量的表之间的等连接，而不管它们的大小和分布方法。查询规划器根据表的分布方式选择最佳连接方法和连接顺序。它评估几个可能的连接顺序，并创建一个连接计划，该计划要求跨网络传输的数据最少。
 
 Co-located joins
 ~~~~~~~~~~~~~~~~
 
-When two tables are :ref:`co-located <colocation>` then they can be joined efficiently on their common distribution columns. A co-located join is the most efficient way to join two large distributed tables.
+当两个表:ref:`位于同一位置 <colocation>`时，它们可以在其共同的分布列上高效地连接。位于同一位置的连接是连接两个大型分布式表的最有效方式。
 
-Internally, the Citus coordinator knows which shards of the co-located tables might match with shards of the other table by looking at the distribution column metadata. This allows Citus to prune away shard pairs which cannot produce matching join keys. The joins between remaining shard pairs are executed in parallel on the workers and then the results are returned to the coordinator.
+在内部，Citus协调器通过查看分发列元数据来了解位于同一位置的表的哪些分片可能与另一个表的分片匹配。这允许Citus修剪掉不能产生匹配的连接键的分片对。剩余分片对之间的连接在工作节点上并行执行，然后将结果返回给协调器。
 
-.. note::
+.. 注意::
 
-  Be sure that the tables are distributed into the same number of shards and that the distribution columns of each table have exactly matching types. Attempting to join on columns of slightly different types such as int and bigint can cause problems.
+  确保将表分布到相同数量的分片中，并确保每个表的分发列具有完全匹配的类型。尝试连接稍微不同类型的列（如int和bigint）可能会导致问题。
 
-Reference table joins
-~~~~~~~~~~~~~~~~~~~~~
+引用表连接
+~~~~~~~~~~
 
-:ref:`reference_tables` can be used as "dimension" tables to join efficiently with large "fact" tables. Because reference tables are replicated in full across all worker nodes, a reference join can be decomposed into local joins on each worker and performed in parallel. A reference join is like a more flexible version of a co-located join because reference tables aren't distributed on any particular column and are free to join on any of their columns.
+:ref:`reference_tables`可以用作“维度”表，以便与大的“事实”表有效地连接。由于引用表在所有工作节点上完全复制，因此引用连接分解可以为每个工作程序上的本地连接并并行执行。引用连接类似于位于同一位置连接的更灵活版本，因为引用表不分布在任何特定列上，并且可以在任何列上自由加入。
 
 .. _repartition_joins:
 
-Repartition joins
-~~~~~~~~~~~~~~~~~
+重新分区连接
+~~~~~~~~~~~~
 
-In some cases, you may need to join two tables on columns other than the distribution column. For such cases, Citus also allows joining on non-distribution key columns by dynamically repartitioning the tables for the query.
+在某些情况下，您可能需要在分发列以外的列上连接两个表。对于这种情况，Citus还允许通过对查询的表进行动态重新分区来连接非分布键列。
 
-In such cases the table(s) to be partitioned are determined by the query optimizer on the basis of the distribution columns, join keys and sizes of the tables. With repartitioned tables, it can be ensured that only relevant shard pairs are joined with each other reducing the amount of data transferred across network drastically.
+在某些情况下，查询优化器根据分布列、连接键和表的大小来确定要分区的表。使用重新分区的表，可以确保只有相关的分片对相互连接，从而大大减少跨网络传输的数据量。
 
-In general, co-located joins are more efficient than repartition joins as repartition joins require shuffling of data. So, you should try to distribute your tables by the common join keys whenever possible.
+通常，位于同一位置的连接比重新分区连接更有效，因为重新分区连接需要重排数据。因此，您应该尝试尽可能通过位于同一位置的连接键来分布表。
