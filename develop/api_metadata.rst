@@ -104,26 +104,19 @@ pg_dist_shard中的shardstorage列指示用于分片的存储类型。下面简�
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pg_dist_placement表跟踪工作节点上的分片复制副本的位置。分配给特定节点的分片的每个副本称为分片放置。此表存储有关每个分片放置的运行状况和位置的信息。
-The pg_dist_placement table tracks the location of shard replicas on worker nodes. Each replica of a shard assigned to a specific node is called a shard placement.
-This table stores information about the health and location of each shard placement.
 
 +----------------+----------------------+---------------------------------------------------------------------------+
 |      Name      |         Type         |       Description                                                         |
 +================+======================+===========================================================================+
-| shardid        |       bigint         | | Shard identifier associated with this placement. This value references  |
-|                |                      | | the shardid column in the pg_dist_shard catalog table.                  |
+| shardid        |       bigint         | | 与此位置关联的分片标识符。该值引用pg_dist_shard目录表中的shardid列。  |
 +----------------+----------------------+---------------------------------------------------------------------------+ 
-| shardstate     |         int          | | Describes the state of this placement. Different shard states are       |
-|                |                      | | discussed in the section below.                                         |
+| shardstate     |         int          | | 描述此位置的状态。不同的分片状态是在下面的部分讨论。       |
 +----------------+----------------------+---------------------------------------------------------------------------+
-| shardlength    |       bigint         | | For append distributed tables, the size of the shard placement on the   |
-|                |                      | | worker node in bytes.                                                   |
-|                |                      | | For hash distributed tables, zero.                                      |
+| shardlength    |       bigint         | | F对于附加分布式表，分片放置的大小工作节点以字节为单位对于散列分布式表，为零。|
 +----------------+----------------------+---------------------------------------------------------------------------+
-| placementid    |       bigint         | | Unique auto-generated identifier for each individual placement.         |
+| placementid    |       bigint         | | 每个展示位置的唯一自动生成标识符。         |
 +----------------+----------------------+---------------------------------------------------------------------------+
-| groupid        |         int          | | Identifier used to denote a group of one primary server and zero or more|
-|                |                      | | secondary servers, when the streaming replication model is used.        |
+| groupid        |         int          | | 用于表示一个主服务器组和零个或多个的标识符辅助服务器，使用流复制模型时。|
 +----------------+----------------------+---------------------------------------------------------------------------+
 
 ::
