@@ -1,45 +1,42 @@
 .. _metadata_tables:
 
-Citus Tables and Views
+Citus表和视图
 ======================
 
-Coordinator Metadata
+协调者元数据
 --------------------
 
-Citus divides each distributed table into multiple logical shards based on the distribution column. The coordinator then maintains metadata tables to track statistics and information about the health and location of these shards. In this section, we describe each of these metadata tables and their schema. You can view and query these tables using SQL after logging into the coordinator node.
+Citus根据分布列将每个分布式表划分为多个逻辑分片。
+然后, 协调器维护元数据表，以跟踪统计信息和关于这些分片的健康状况和位置的信息。
+在本节中，我们将描述每个元数据表及其架构。登录到协调器节点后，您可以使用SQL查看和查询这些表。
 
 .. _partition_table:
 
-Partition table
+分区表
 ~~~~~~~~~~~~~~~~~
 
-The pg_dist_partition table stores metadata about which tables in the database are distributed. For each distributed table, it also stores information about the distribution method and detailed information about the distribution column.
+pg_dist_partition表存储有关数据库中哪些表的分布的元数据。对于每个分布式表，它还存储有关分布方法的信息和有关分布列的详细信息。
 
 +----------------+----------------------+---------------------------------------------------------------------------+
 |      Name      |         Type         |       Description                                                         |
 +================+======================+===========================================================================+
-| logicalrelid   |         regclass     | | Distributed table to which this row corresponds. This value references  |
-|                |                      | | the relfilenode column in the pg_class system catalog table.            |
+| logicalrelid   |         regclass     | | 此行对应的分布式表。该值引用pg_class系统目录表中的relfilenode列。       |
+|                |                      | |                                                                         |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|  partmethod    |         char         | | The method used for partitioning / distribution. The values of this     |
-|                |                      | | column corresponding to different distribution methods are :-           |
+|  partmethod    |         char         | | 用于分区/分发的方法。这个的价值对应不同分配方法的列是                   |
 |                |                      | | append: 'a'                                                             |
 |                |                      | | hash: 'h'                                                               |
 |                |                      | | reference table: 'n'                                                    |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|   partkey      |         text         | | Detailed information about the distribution column including column     |
-|                |                      | | number, type and other relevant information.                            |
+|   partkey      |         text         | | 有关分发列的详细信息，包括列数量，类型和其他相关信息。                  |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|   colocationid |         integer      | | Co-location group to which this table belongs. Tables in the same group |
-|                |                      | | allow co-located joins and distributed rollups among other              |
-|                |                      | | optimizations. This value references the colocationid column in the     |
-|                |                      | | pg_dist_colocation table.                                               |
+|   colocationid |         integer      | | 此表所属的共址组。同一组中的表允许共存的连接和分布式汇总等优化。        |
+|                |                      | | 该值引用了pg_dist_colocation表中的colocationid列。                      |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|   repmodel     |         char         | | The method used for data replication. The values of this column         |
-|                |                      | | corresponding to different replication methods are :-                   |
-|                |                      | | * citus statement-based replication: 'c'                                |
-|                |                      | | * postgresql streaming replication:  's'                                |
-|                |                      | | * two-phase commit (for reference tables): 't'                          |
+|   repmodel     |         char         | | 用于数据复制的方法。此列的值对应不同的复制方法有：                      |
+|                |                      | | * 基于声明的复制: 'c'                                                   |
+|                |                      | | * postgresql流复制:  's'                                                |
+|                |                      | | * 两阶段提交（参考表）: 't'                                             |
 +----------------+----------------------+---------------------------------------------------------------------------+
 
 ::
@@ -52,31 +49,25 @@ The pg_dist_partition table stores metadata about which tables in the database a
 
 .. _pg_dist_shard:
 
-Shard table
+分片表
 ~~~~~~~~~~~~~~~~~
 
-The pg_dist_shard table stores metadata about individual shards of a table. This includes information about which distributed table the shard belongs to and statistics about the distribution column for that shard. For append distributed tables, these statistics correspond to min / max values of the distribution column. In case of hash distributed tables, they are hash token ranges assigned to that shard. These statistics are used for pruning away unrelated shards during SELECT queries.
+pg_dist_shard表存储有关表的各个分片的元数据。这包括有关该分片所属的分布式表的信息以及该分片的分步列的统计信息。对于追加分布式表，这些统计信息对应于分步列的最小值/最大值。在散列分布式表的情况下，它们是分配给该分片的散列令牌范围。这些统计信息用于在SELECT查询期间修剪不相关的分片。
 
 +----------------+----------------------+---------------------------------------------------------------------------+
 |      Name      |         Type         |       Description                                                         |
 +================+======================+===========================================================================+
-| logicalrelid   |         regclass     | | Distributed table to which this shard belongs. This value references the|
-|                |                      | | relfilenode column in the pg_class system catalog table.                |
+| logicalrelid   |         regclass     | | 此分片所属的分布式表。该值引用了pg_class系统目录表中的relfilenode列。   |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|    shardid     |         bigint       | | Globally unique identifier assigned to this shard.                      |
+|    shardid     |         bigint       | | 分配给此分片的全局唯一标识符。                                          |
 +----------------+----------------------+---------------------------------------------------------------------------+
-| shardstorage   |            char      | | Type of storage used for this shard. Different storage types are        |
-|                |                      | | discussed in the table below.                                           |
+| shardstorage   |            char      | | 用于此分片的存储类型。不同的存储类型是在下表中讨论。                    |
 +----------------+----------------------+---------------------------------------------------------------------------+
-| shardminvalue  |            text      | | For append distributed tables, minimum value of the distribution column |
-|                |                      | | in this shard (inclusive).                                              |
-|                |                      | | For hash distributed tables, minimum hash token value assigned to that  |
-|                |                      | | shard (inclusive).                                                      |
+| shardminvalue  |            text      | | 对于附加分布式表，分布列的最小值在这个分片中（包括）                    |
+|                |                      | | 对于散列分布式表，分配给它的最小散列令牌值分片（包括）。                |
 +----------------+----------------------+---------------------------------------------------------------------------+
-| shardmaxvalue  |            text      | | For append distributed tables, maximum value of the distribution column |
-|                |                      | | in this shard (inclusive).                                              |
-|                |                      | | For hash distributed tables, maximum hash token value assigned to that  |
-|                |                      | | shard (inclusive).                                                      |
+| shardmaxvalue  |            text      | | 对于附加分布式表，分发列的最大值在这个分片（包括）中。                  |
+|                |                      | | 对于散列分布式表，分配给它的最大散列令牌值分片（包括）。                |
 +----------------+----------------------+---------------------------------------------------------------------------+
 
 ::
