@@ -82,24 +82,20 @@ pg_dist_shard表存储有关表的各个分片的元数据。这包括有关该�
      (4 rows)
 
 
-Shard Storage Types
+分片存储类型
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The shardstorage column in pg_dist_shard indicates the type of storage used for the shard. A brief overview of different shard storage types and their representation is below.
+pg_dist_shard中的shardstorage列指示用于分片的存储类型。下面简要概述了不同的分片存储类型及其表示形式。
 
-
-+----------------+----------------------+-----------------------------------------------------------------------------+
-|  Storage Type  |  Shardstorage value  |       Description                                                           |
-+================+======================+=============================================================================+
-|   TABLE        |           't'        | | Indicates that shard stores data belonging to a regular                   |
-|                |                      | | distributed table.                                                        |
-+----------------+----------------------+-----------------------------------------------------------------------------+   
-|  COLUMNAR      |            'c'       | | Indicates that shard stores columnar data. (Used by                       |
-|                |                      | | distributed cstore_fdw tables)                                            |
-+----------------+----------------------+-----------------------------------------------------------------------------+
-|   FOREIGN      |            'f'       | | Indicates that shard stores foreign data. (Used by                        |
-|                |                      | | distributed file_fdw tables)                                              |
-+----------------+----------------------+-----------------------------------------------------------------------------+
++----------------+----------------------+---------------------------------------------------------------------------+
+|  存储类型      |  Shardstorage值      |  描述                                                                     |
++================+======================+===========================================================================+
+|   TABLE        |           't'        | | 表示分片存储属于常规的数据布式表。                                      |
++----------------+----------------------+---------------------------------------------------------------------------+
+|  COLUMNAR      |            'c'       | | 表示分片存储列数据。（用于分布式cstore_fdw表）                          |
++----------------+----------------------+---------------------------------------------------------------------------+
+|   FOREIGN      |            'f'       | | 表示分片存储外部数据。（用于分布式file_fdw表）                          |
+|+---------------+----------------------+---------------------------------------------------------------------------+
 
 
 .. _placements:
@@ -171,7 +167,7 @@ Citus manages shard health on a per-placement basis and automatically marks a pl
 |  State name    |  Shardstate value    |       Description                                                         |
 +================+======================+===========================================================================+
 |   FINALIZED    |           1          | | This is the state new shards are created in. Shard placements           |
-|                |                      | | in this state are considered up-to-date and are used in query   	    |
+|                |                      | | in this state are considered up-to-date and are used in query   	       |
 |                |                      | | planning and execution.                                                 |
 +----------------+----------------------+---------------------------------------------------------------------------+   
 |  INACTIVE      |            3         | | Shard placements in this state are considered inactive due to           |
