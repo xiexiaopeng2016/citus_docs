@@ -100,10 +100,12 @@ pg_dist_shard中的shardstorage列指示用于分片的存储类型。下面简�
 
 .. _placements:
 
-Shard placement table
+分片放置表
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The pg_dist_placement table tracks the location of shard replicas on worker nodes. Each replica of a shard assigned to a specific node is called a shard placement. This table stores information about the health and location of each shard placement.
+pg_dist_placement表跟踪工作节点上的分片复制副本的位置。分配给特定节点的分片的每个副本称为分片放置。此表存储有关每个分片放置的运行状况和位置的信息。
+The pg_dist_placement table tracks the location of shard replicas on worker nodes. Each replica of a shard assigned to a specific node is called a shard placement.
+This table stores information about the health and location of each shard placement.
 
 +----------------+----------------------+---------------------------------------------------------------------------+
 |      Name      |         Type         |       Description                                                         |
