@@ -1,20 +1,21 @@
 .. _manual_prop:
 
-Manual Query Propagation
-========================
+手动查询传播
+============
 
-When the user issues a query, the Citus coordinator partitions it into smaller query fragments where each query fragment can be run independently on a worker shard. This allows Citus to distribute each query across the cluster.
+当用户发出查询时，Citus协调者将其划分为较小的查询片段，其中每个查询片段可以在工作者分片上独立运行。这允许Citus在群集中分发每个查询。
 
-However the way queries are partitioned into fragments (and which queries are propagated at all) varies by the type of query. In some advanced situations it is useful to manually control this behavior. Citus provides utility functions to propagate SQL to workers, shards, or placements.
+但是，查询被分区为片段的方式（以及传播哪些查询）因查询类型而异。在某些高级情况下，手动控制这种行为非常有用。Citus提供实用函数将SQL传播给工作者、分片或placement。
 
-Manual query propagation bypasses coordinator logic, locking, and any other consistency checks. These functions are available as a last resort to allow statements which Citus otherwise does not run natively. Use them carefully to avoid data inconsistency and deadlocks.
+手动查询传播绕过协调者逻辑，锁定和任何其他一致性检查。这些函数作为最后的手段可用于允许Citus本身不运行的语句。请谨慎使用它们以避免数据不一致和死锁。
 
 .. _worker_propagation:
 
-Running on all Workers
-----------------------
+在所有工作者运行
+---------------
 
-The least granular level of execution is broadcasting a statement for execution on all workers. This is useful for viewing properties of entire worker databases or creating UDFs uniformly throughout the cluster. For example:
+执行的最小粒度级别是广播一个语句，以便在所有工作人员上执行。
+这对于查看整个工作者数据库的属性或在整个群集中统一创建UDFs非常有用。例如：
 
 .. code-block:: postgresql
 
@@ -24,16 +25,18 @@ The least granular level of execution is broadcasting a statement for execution 
   -- List the work_mem setting of each worker database
   SELECT run_command_on_workers($cmd$ SHOW work_mem; $cmd$);
 
-.. note::
+.. 注意::
 
-  The :code:`run_command_on_workers` function and other manual propagation commands in this section can run only queries which return a single column and single row.
+  本节中的:code:`run_command_on_workers`函数和其他手动传播命令只能运行返回单列和单行的查询。
 
-Running on all Shards
----------------------
+在所有分片上运行
+---------------
 
-The next level of granularity is running a command across all shards of a particular distributed table. It can be useful, for instance, in reading the properties of a table directly on workers. Queries run locally on a worker node have full access to metadata such as table statistics.
+下一个粒度级别是在一个特定分布式表的所有分片上运行命令。它可能很有用, 例如，在直接读取工作者表的属性。在工作者节点上本地运行的查询可以完全访问元数据, 比如表统计等。
 
-The :code:`run_command_on_shards` function applies a SQL command to each shard, where the shard name is provided for interpolation in the command. Here is an example of estimating the row count for a distributed table by using the pg_class table on each worker to estimate the number of rows for each shard. Notice the :code:`%s` which will be replaced with each shard's name.
+该:code:`run_command_on_shards`函数将SQL命令应用于每个分片，其中分片名称用于在命令中进行插值。
+下面是一个示例，通过使用每个工作者上的pg_class表估计每个分片的行数来估计一个分布式表的行数。
+注意: :code:`%s`将被替换为每个碎片的名称。
 
 .. code-block:: postgresql
 
@@ -52,12 +55,12 @@ The :code:`run_command_on_shards` function applies a SQL command to each shard, 
     );
 
 
-Running on all Placements
--------------------------
+在所有位置上运行
+---------------
 
-The most granular level of execution is running a command across all shards and their replicas (aka :ref:`placements <placements>`). It can be useful for running data modification commands, which must apply to every replica to ensure consistency.
+最精细的执行级别是跨所有分片及其副本（也称为:ref:`位置 <placements>`）运行命令。它对于运行数据修改命令非常有用，这些命令必须应用于每个副本以确保一致性。
 
-For example, suppose a distributed table has an :code:`updated_at` field, and we want to "touch" all rows so that they are marked as updated at a certain time. An ordinary UPDATE statement on the coordinator requires a filter by the distribution column, but we can manually propagate the update across all shards and replicas:
+例如，假设分布式表具有:code:`updated_at`字段，并且我们想要“触摸”所有行，以便在特定时间将它们标记为已更新。协调者上的普通UPDATE语句需要分发列的过滤器，但我们可以跨所有分片和副本手动传播更新：
 
 .. code-block:: postgresql
 
@@ -72,7 +75,7 @@ For example, suppose a distributed table has an :code:`updated_at` field, and we
     $cmd$
   );
 
-A useful companion to :code:`run_command_on_placements` is :code:`run_command_on_colocated_placements`. It interpolates the names of *two* placements of :ref:`co-located <colocation>` distributed tables into a query. The placement pairs are always chosen to be local to the same worker where full SQL coverage is available. Thus we can use advanced SQL features like triggers to relate the tables:
+:code:`run_command_on_placements`的一个有用伙伴是:code:`run_command_on_colocated_placements`。它将:ref:`位于同一位置 <colocation>`分布式表的*两个*位置的名称插入到一个查询中。位置对总是被选择为本地的同一个工作者，在那里的使用可以覆盖完整的SQL。因此，我们可以使用像触发器这样的高级SQL功能来关联表：
 
 .. code-block:: postgresql
 
@@ -112,11 +115,11 @@ A useful companion to :code:`run_command_on_placements` is :code:`run_command_on
     $cmd$
   );
 
-Limitations
------------
+限制
+----
 
-* There are no safe-guards against deadlock for multi-statement transactions.
-* There are no safe-guards against mid-query failures and resulting inconsistencies.
-* Query results are cached in memory; these functions can't deal with very big result sets.
-* The functions error out early if they cannot connect to a node.
-* You can do very bad things!
+* 多语句事务没有防止死锁的安全措施。
+* 没有针对中间查询失败的保护措施以及由此导致的不一致。
+* 查询结果缓存在内存中; 这些函数无法处理非常大的结果集。
+* 如果函数不能连接到节点，则会提前出错。
+* 你可以做很糟糕的事情！

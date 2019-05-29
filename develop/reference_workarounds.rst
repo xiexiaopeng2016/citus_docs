@@ -1,42 +1,41 @@
 .. _citus_sql_reference:
 
-SQL Support and Workarounds
-===========================
+SQL支持和解决方法
+=================
 
-As Citus provides distributed functionality by extending PostgreSQL, it is compatible with PostgreSQL constructs. This means that users can use the tools and features that come with the rich and extensible PostgreSQL ecosystem for distributed tables created with Citus.
+由于Citus通过扩展PostgreSQL提供分布式功能，所以它与PostgreSQL结构兼容。这意味着用户可以将丰富且可扩展的PostgreSQL生态系统附带的工具和功能用于使用Citus创建的分布式表。
 
-Citus has 100% SQL coverage for any queries it is able to execute on a single worker node. These kind of queries are called :ref:`router executable <router_executor>` and are common in :ref:`mt_use_case` when accessing information about a single tenant.
+对于能够在单个工作节点上执行的任何查询，Citus具有100％的SQL覆盖率。
+这些类型的查询称为:ref:`router executable <router_executor>`，在访问有关单个租户的信息时，在:ref:`mt_use_case`中很常见。
 
-Even cross-node queries (used for parallel computations) support most SQL features. However some SQL features are not supported for queries which combine information from multiple nodes.
+甚至跨节点查询（用于并行计算）也支持大多数SQL功能。但是，对于组合来自多个节点的信息的查询，不支持某些SQL特性。
 
-**Limitations for Cross-Node SQL Queries:**
+**跨节点SQL查询的限制:**
 
-* `Window functions <https://www.postgresql.org/docs/current/static/tutorial-window.html>`_ are supported only when they include the distribution column in PARTITION BY.
-* `SELECT … FOR UPDATE <https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FOR-UPDATE-SHARE>`_ work in :ref:`router_executor` queries only
-* `TABLESAMPLE <https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FROM>`_ work in :ref:`router_executor` queries only
-* Correlated subqueries are supported only when the correlation is on the :ref:`dist_column` and the subqueries conform to subquery pushdown rules (e.g., grouping by the distribution column, with no LIMIT or LIMIT OFFSET clause).
-* `Recursive CTEs <https://www.postgresql.org/docs/current/static/queries-with.html#idm46428713247840>`_ work in :ref:`router_executor` queries only
-* `Grouping sets <https://www.postgresql.org/docs/current/static/queries-table-expressions.html#QUERIES-GROUPING-SETS>`_ work in :ref:`router_executor` queries only
+* `窗口函数 <https://www.postgresql.org/docs/current/static/tutorial-window.html>`_仅在PARTITION BY中包含分布列时才支持。
+* S`SELECT … FOR UPDATE <https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FOR-UPDATE-SHARE>`_ 仅在:ref:`router_executor`查询中工作
+* `TABLESAMPLE <https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FROM>`_仅在:ref:`router_executor`查询中工作
+* 仅当关联位于:ref:`dist_column`上且子查询符合子查询下推规则（例如，通过分发列进行分组，没有LIMIT或LIMIT OFFSET子句）时，才支持相关子查询。
+* `递归 CTEs <https://www.postgresql.org/docs/current/static/queries-with.html#idm46428713247840>`_仅在:ref:`router_executor`查询中起作用
+* `Grouping sets <https://www.postgresql.org/docs/current/static/queries-table-expressions.html#QUERIES-GROUPING-SETS>`_仅适用于:ref:`router_executor`查询
 
-To learn more about PostgreSQL and its features, you can visit the `PostgreSQL documentation <http://www.postgresql.org/docs/current/static/index.html>`_. For a detailed reference of the PostgreSQL SQL command dialect (which can be used as is by Citus users), you can see the `SQL Command Reference <http://www.postgresql.org/docs/current/static/sql-commands.html>`_.
+要了解有关PostgreSQL及其功能的更多信息，可以访问`PostgreSQL文档<http://www.postgresql.org/docs/current/static/index.html>`_。有关PostgreSQL SQL命令方言（Citus用户可以使用）的详细参考，您可以看到`SQL命令参考 <http://www.postgresql.org/docs/current/static/sql-commands.html>`_。
 
 .. _workarounds:
 
-Workarounds
------------
+解决方法
+--------
 
-Before attempting workarounds consider whether Citus is appropriate for your
-situation. Citus' current version works well for :ref:`real-time analytics and
-multi-tenant use cases. <when_to_use_citus>`
+在尝试变通方法之前，请考虑Citus是否适合您的情况。Citus的当前版本适用于:ref:`real-time analytics and multi-tenant use cases. <when_to_use_citus>`。
 
-Citus supports all SQL statements in the multi-tenant use-case. Even in the real-time analytics use-cases, with queries that span across nodes, Citus supports the majority of statements. The few types of unsupported queries are listed in :ref:`unsupported` Many of the unsupported features have workarounds; below are a number of the most useful.
+Citus支持多租户用例中的所有SQL语句。即使在实时分析用例中，通过跨节点的查询，Citus也支持大多数语句。几种不支持的查询类型列在:ref:`unsupported`中，许多不支持的特性都有解决方案;下面是一些最有用的。Citus不支持任何PostgreSQL功能，列出了几种不支持的查询？许多不受支持的功能都有解决方法; 以下是一些最有用的。
 
 .. _join_local_dist:
 
-JOIN a local and a distributed table
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+连接本地和分布式表
+~~~~~~~~~~~~~~~~~
 
-Attempting to execute a JOIN between a local table "local" and a distributed table "dist" causes an error:
+尝试在本地表"local"和分布式表"dist"之间执行JOIN会导致错误：
 
 .. code-block:: sql
 
@@ -49,7 +48,7 @@ Attempting to execute a JOIN between a local table "local" and a distributed tab
   LOCATION:  DistributedTableCacheEntry, metadata_cache.c:711
   */
 
-Although you can't join such tables directly, by wrapping the local table in a subquery or CTE you can make Citus' recursive query planner copy the local table data to worker nodes. By colocating the data this allows the query to proceed.
+虽然您无法直接连接此类表，但通过将本地表包装在子查询或CTE中，可以使Citus的递归查询计划程序将本地表数据复制到工作节点。通过共置数据，这允许查询继续进行
 
 .. code-block:: sql
 
@@ -65,14 +64,16 @@ Although you can't join such tables directly, by wrapping the local table in a s
   SELECT * FROM x
   JOIN dist USING (id);
 
-Remember that the coordinator will send the results in the subquery or CTE to all workers which require it for processing. Thus it's best to either add the most specific filters and limits to the inner query as possible, or else aggregate the table. That reduces the network overhead which such a query can cause. More about this in :ref:`subquery_perf`.
+请记住，协调者会将子查询或CTE中的结果发送给需要进行处理的所有工作者。
+因此，最好是尽可能向内部查询添加最特定的过滤器和限制，或者聚合表。
+这减少了这种查询可能导致的网络开销。有关:ref:`subquery_perf`的更多信息。
 
-Temp Tables: the Workaround of Last Resort
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+时表:最后的解决方案
+~~~~~~~~~~~~~~~~~~
 
-There are still a few queries that are :ref:`unsupported <unsupported>` even with the use of push-pull execution via subqueries. One of them is running window functions that partition by a non-distribution column.
+即使通过子查询使用推拉执行，仍有一些查询:ref:`不受支持 <unsupported>`。其中一个是运行由非分布列分区的窗口函数。
 
-Suppose we have a table called :code:`github_events`, distributed by the column :code:`user_id`. Then the following window function will not work:
+假设我们有一个名为的表:code:`github_events`，由列:code:`user_id`分布。那么以下窗口函数将不起作用
 
 .. code-block:: sql
 
@@ -83,7 +84,7 @@ Suppose we have a table called :code:`github_events`, distributed by the column 
     FROM github_events
    WHERE repo_id IN (8514, 15435, 19438, 21692);
 
-There is another trick though. We can pull the relevant information to the coordinator as a temporary table:
+还有另外一个技巧。我们可以将相关信息作为临时表提供给协调者：
 
 .. code-block:: sql
 
@@ -101,5 +102,5 @@ There is another trick though. We can pull the relevant information to the coord
     OVER (PARTITION BY repo_id)
     FROM results;
 
-Creating a temporary table on the coordinator is a last resort. It is limited by the disk size and CPU of the node.
+在协调者上创建临时表是最后的手段。它受节点的磁盘大小和CPU的限制。
 

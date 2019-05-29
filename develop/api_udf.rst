@@ -1,54 +1,48 @@
 .. _user_defined_functions:
 
-Citus Utility Functions
-=======================
+Citus实用功能
+=============
 
-This section contains reference information for the User Defined Functions provided by Citus. These functions help in providing additional distributed functionality to Citus other than the standard SQL commands.
+本节包含Citus提供的用户定义函数的参考信息。这些函数有助于为Citus提供除标准SQL命令之外的其他分布式功能。
 
-Table and Shard DDL
--------------------
+表和分片 DDL
+------------
 .. _create_distributed_table:
 
 create_distributed_table
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The create_distributed_table() function is used to define a distributed table
-and create its shards if it's a hash-distributed table. This function takes in a
-table name, the distribution column and an optional distribution method and inserts
-appropriate metadata to mark the table as distributed. The function defaults to
-'hash' distribution if no distribution method is specified. If the table is
-hash-distributed, the function also creates worker shards based on the shard
-count and shard replication factor configuration values. If the table contains
-any rows, they are automatically distributed to worker nodes.
+create_distributed_table() 函数用于定义分布式表，如果它是散列分布式表，则为它创建切分。此函数接受表名，分布列和可选的分布方法，并插入适当的元数据以将表标记为分布式。如果未指定分发方法，则函数默认为'hash'分布。如果表是散列分布式的，则该函数还会根据分片计数和分片复制因子配置值创建工作分片。如果表包含任何行，则它们会自动分发到工作节点。
 
-This function replaces usage of master_create_distributed_table() followed by
-master_create_worker_shards().
+这个函数替换了master_create_distributed_table()后面跟着master_create_worker_shards()的用法。
 
-Arguments
+参数
 ************************
 
-**table_name:** Name of the table which needs to be distributed.
+**table_name:** 需要分发的表的名称。
 
-**distribution_column:** The column on which the table is to be distributed.
+**distribution_column:** 要分布该表的列。
 
-**distribution_type:** (Optional) The method according to which the table is
-to be distributed. Permissible values are append or hash, and defaults to 'hash'.
+**distribution_type:** (可选) 分布表的方法。允许的值是append或hash，默认值为'hash'。
 
-**colocate_with:** (Optional) include current table in the co-location group of another table. By default tables are co-located when they are distributed by columns of the same type, have the same shard count, and have the same replication factor. Possible values for :code:`colocate_with` are :code:`default`, :code:`none` to start a new co-location group, or the name of another table to co-locate with that table.  (See :ref:`colocation_groups`.)
+**colocate_with:** (可选) 将当前表包含在另一个表的共存位置组中。
+默认情况下，如果表由相同类型的列分布，具有相同的分片计数，并且具有相同的复制因子，那么它们将位于同一位置。
+:code:`colocate_with`可能的值是:code:`default`, :code:`none`. 要启动新的协同定位组，还是要与该表共同定位的另一个表的名称。（参见共同定位表。）
+code: ' colocate_with '的可能值是:code: ' default ', :code: ' none '来启动一个新的共定位组，或者另一个表的名称来与该表共定位。(参见:ref:`colocation_groups`.)
 
-Keep in mind that the default value of ``colocate_with`` does implicit co-location. As :ref:`colocation` explains, this can be a great thing when tables are related or will be joined. However when two tables are unrelated but happen to use the same datatype for their distribution columns, accidentally co-locating them can decrease performance during :ref:`shard rebalancing <shard_rebalancing>`. The table shards will be moved together unnecessarily in a "cascade."
+请记住``colocate_with``的默认值是隐式共址。正如:ref:`colocation`所解释的那样，当表被关联或将被连接时，这可能是一件很棒的事情。但是，当两个表不相关但碰巧对其分发列使用相同的数据类型时，意外地共同定位它们会降低分片重新平衡期间的性能。然而，当两个表不相关，但碰巧对它们的分布列使用相同的数据类型时，意外地将它们放在同一个位置会降低:ref:`shard rebalancing <shard_rebalancing>`期间的性能。表分片将不必要地以“级联”方式移动到一起。
 
-If a new distributed table is not related to other tables, it's best to specify ``colocate_with => 'none'``.
+如果新的分布式表与其他表无关，则最好指定``colocate_with => 'none'``。
 
-Return Value
+返回值
 ********************************
 
 N/A
 
-Example
+示例
 *************************
 
-This example informs the database that the github_events table should be distributed by hash on the repo_id column.
+此示例通知数据库github_events表应通过repo_id列进行hash分布。
 
 .. code-block:: postgresql
 
@@ -58,32 +52,29 @@ This example informs the database that the github_events table should be distrib
   SELECT create_distributed_table('github_events', 'repo_id',
                                   colocate_with => 'github_repo');
 
-For more examples, see :ref:`ddl`.
+有关更多示例，请参阅:ref:`ddl`。
 
 .. _create_reference_table:
 
 create_reference_table
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The create_reference_table() function is used to define a small reference or
-dimension table. This function takes in a table name, and creates a distributed
-table with just one shard, replicated to every worker node.
+create_reference_table()函数用于定义小型引用或维度表。此函数接受表名，并创建仅包含一个分片的分布式表，并复制到每个工作节点。
 
-Arguments
+参数
 ************************
 
-**table_name:** Name of the small dimension or reference table which needs to be distributed.
+**table_name:** 需要分发的小维度或引用表的名称。
 
 
-Return Value
+返回值
 ********************************
 
 N/A
 
-Example
+示例
 *************************
-This example informs the database that the nation table should be defined as a
-reference table
+这个示例通知数据库，应该将nation表定义为引用表
 
 .. code-block:: postgresql
 
@@ -93,23 +84,22 @@ upgrade_to_reference_table
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. _upgrade_to_reference_table:
 
-The upgrade_to_reference_table() function takes an existing distributed table which has a shard count of one, and upgrades it to be a recognized reference table. After calling this function, the table will be as if it had been created with :ref:`create_reference_table <create_reference_table>`.
+upgrade_to_reference_table()函数采用分片数目为1的现有分布式表，并将其升级为可识别的引用表。调用此函数后，该表将如同使用:ref:`create_reference_table <create_reference_table>创建一样。
 
-Arguments
+参数
 ************************
 
-**table_name:** Name of the distributed table (having shard count = 1) which will be distributed as a reference table.
+**table_name:** 分布式表的名称（具有分片数目=1），它将作为引用表分布。
 
-Return Value
+返回值
 ********************************
 
 N/A
 
-Example
+示例
 *************************
 
-This example informs the database that the nation table should be defined as a
-reference table
+这个示例通知数据库，应该将nation表定义为引用表
 
 .. code-block:: postgresql
 
@@ -120,38 +110,38 @@ reference table
 mark_tables_colocated
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The mark_tables_colocated() function takes a distributed table (the source), and a list of others (the targets), and puts the targets into the same co-location group as the source. If the source is not yet in a group, this function creates one, and assigns the source and targets to it.
+mark_tables_colocated()函数采用分布式表（源表）和一系列其他表（目标表），并将目标表放入与源表相同的共址组中。如果源表尚未在组中，则此函数会创建一个，并将源表和目标表分配给它。
 
-Usually colocating tables ought to be done at table distribution time via the ``colocate_with`` parameter of :ref:`create_distributed_table`. But ``mark_tables_colocated`` can take care of it if necessary.
+通常，应该通过create_distributed_table的``colocate_with``参数在表分布时完成对表的共址处理。但必要时，mark_tables_colocated可以解决它。
 
-Arguments
+参数
 ************************
 
-**source_table_name:** Name of the distributed table whose co-location group the targets will be assigned to match.
+**source_table_name:** 分布表的名称，目标表将分配给与之匹配的共址组。
 
-**target_table_names:** Array of names of the distributed target tables, must be non-empty. These distributed tables must match the source table in:
+**target_table_names:** 分布式目标表的名称数组，必须为非空。这些分布式表必须与以下源表相匹配：
 
-  * distribution method
-  * distribution column type
-  * replication type
-  * shard count
+  * 分布方法
+  * 分布列类型
+  * 复制类型
+  * 分片数目
 
-Failing this, Citus will raise an error. For instance, attempting to colocate tables ``apples`` and ``oranges`` whose distribution column types differ results in:
+如果做不到这一点，Citus将引发错误。例如，尝试共址``apples``和``oranges``表, 它们的分布列列类型不同会导致：
 
 ::
 
   ERROR:  XX000: cannot colocate tables apples and oranges
   DETAIL:  Distribution column types don't match for apples and oranges.
 
-Return Value
+返回值
 ********************************
 
 N/A
 
-Example
+示例
 *************************
 
-This example puts ``products`` and ``line_items`` in the same co-location group as ``stores``. The example assumes that these tables are all distributed on a column with matching type, most likely a "store id."
+本实施例将``products``和``line_items``放入与``stores``相同的共址组。该示例假定这些表都分布在具有匹配类型的列上，很可能是"store id."。
 
 .. code-block:: postgresql
 
@@ -161,32 +151,29 @@ master_create_distributed_table
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. _master_create_distributed_table:
 
-.. note::
-   This function is deprecated, and replaced by :ref:`create_distributed_table <create_distributed_table>`.
+.. 注意::
+   这个函数是已经废弃，并被:ref:`create_distributed_table <create_distributed_table>`代替。
 
-The master_create_distributed_table() function is used to define a distributed
-table. This function takes in a table name, the distribution column and
-distribution method and inserts appropriate metadata to mark the table as
-distributed.
+master_create_distributed_table()函数用于定义分布式表。此函数接受表名，分步列和分步方法，并插入适当的元数据用于将表标记为分布式。
 
-
-Arguments
+参数
 ************************
 
-**table_name:** Name of the table which needs to be distributed.
+**table_name:** 需要分布的表的名称。
 
-**distribution_column:** The column on which the table is to be distributed.
+**distribution_column:** 要分布该表的列。
 
-**distribution_method:** The method according to which the table is to be distributed. Permissible values are append or hash.
+**distribution_method:** 要分步该表的方法。允许的值是append或hash。
 
-Return Value
+返回值
 ********************************
 
 N/A
 
-Example
+示例
 *************************
-This example informs the database that the github_events table should be distributed by hash on the repo_id column.
+
+此示例通知数据库github_events表应该在repo_id列上使用hash分布。
 
 .. code-block:: postgresql
 
@@ -197,28 +184,29 @@ master_create_worker_shards
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. _master_create_worker_shards:
 
-.. note::
-   This function is deprecated, and replaced by :ref:`create_distributed_table <create_distributed_table>`.
+.. 注意::
 
-The master_create_worker_shards() function creates a specified number of worker shards with the desired replication factor for a *hash* distributed table. While doing so, the function also assigns a portion of the hash token space (which spans between -2 Billion and 2 Billion) to each shard. Once all shards are created, this function saves all distributed metadata on the coordinator.
+   这个函数已经废弃，已经被:ref:`create_distributed_table <create_distributed_table>`代替。
 
-Arguments
+master_create_worker_shards()函数使用所需复制因子为*hash*分布式的表创建指定数量的工作分片。当这样做时，该函数还为每个分片分配一部分散列令牌空间(跨越-2亿到20亿之间)。一旦创建了所有碎片，此功能会将所有分布式元数据保存在协调者上。
+
+参数
 *****************************
 
-**table_name:** Name of hash distributed table for which shards are to be created.
+**table_name:** 要为其创建分片的哈希分布表的名称。
 
-**shard_count:** Number of shards to create.
+**shard_count:** 要创建的分片数。
 
-**replication_factor:** Desired replication factor for each shard.
+**replication_factor:** 每个分片所需的复制因子。
 
-Return Value
+返回值
 **************************
 N/A
 
-Example
+示例
 ***************************
 
-This example usage would create a total of 16 shards for the github_events table where each shard owns a portion of a hash token space and gets replicated on 2 workers.
+此示例用法将为github_events表创建总共16个分片，其中每个分片拥有散列令牌空间的一部分并在2个worker上复制。
 
 .. code-block:: postgresql
 
@@ -228,22 +216,22 @@ This example usage would create a total of 16 shards for the github_events table
 master_create_empty_shard
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_create_empty_shard() function can be used to create an empty shard for an *append* distributed table. Behind the covers, the function first selects shard_replication_factor workers to create the shard on. Then, it connects to the workers and creates empty placements for the shard on the selected workers. Finally, the metadata is updated for these placements on the coordinator to make these shards visible to future queries. The function errors out if it is unable to create the desired number of shard placements.
+master_create_empty_shard()函数可用于为*append* 分布式表创建空分片。在幕后，函数首先选择 shard_replication_factor 工作者来创建分片。然后，它连接到工作者并在选定的工作者上创建分片的空位置。最后，在协调者上更新这些展示位置的元数据，使这些分片在将来的查询中可见。如果无法创建所需数量的分片展示位置，则该函数会出错。
 
-Arguments
+参数
 *********************
 
-**table_name:** Name of the append distributed table for which the new shard is to be created.
+**table_name:** 要为其创建新分片的append分布式表的名称。
 
-Return Value
+返回值
 ****************************
 
-**shard_id:** The function returns the unique id assigned to the newly created shard.
+**shard_id:** 该函数返回分配给新创建的分片的唯一ID。
 
-Example
+示例
 **************************
 
-This example creates an empty shard for the github_events table. The shard id of the created shard is 102089.
+此示例为github_events表创建一个空分片。创建的分片的ID是102089。
 
 .. code-block:: postgresql
 
@@ -253,7 +241,7 @@ This example creates an empty shard for the github_events table. The shard id of
                     102089
     (1 row)
 
-Table and Shard DML
+表和分片 DML
 -------------------
 
 .. _master_append_table_to_shard:
@@ -261,30 +249,30 @@ Table and Shard DML
 master_append_table_to_shard
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_append_table_to_shard() function can be used to append a PostgreSQL table's contents to a shard of an *append* distributed table. Behind the covers, the function connects to each of the workers which have a placement of that shard and appends the contents of the table to each of them. Then, the function updates metadata for the shard placements on the basis of whether the append succeeded or failed on each of them.
+master_append_table_to_shard()函数可用于将PostgreSQL表的内容附加到*append*分布式表的分片。在幕后，该函数连接到具有该分片落点的每个工作者，并将表的内容附加到每个分片。然后，该函数根据每个添加成功或失败的方式更新分片落点的元数据。
 
-If the function is able to successfully append to at least one shard placement, the function will return successfully. It will also mark any placement to which the append failed as INACTIVE so that any future queries do not consider that placement. If the append fails for all placements, the function quits with an error (as no data was appended). In this case, the metadata is left unchanged.
+如果该函数能够成功附加到至少一个分片落点，则该函数将成功返回。它还会将附加失败的任何落点标记为INACTIVE，以便将来的任何查询都不会考虑该落点。如果所有落点的的附加都失败，则该函数将退出并显示错误（因为未附加任何数据）。在这种情况下，元数据保持不变。
 
-Arguments
+参数
 ************************
 
-**shard_id:** Id of the shard to which the contents of the table have to be appended.
+**shard_id:** 切分的Id, 表的内容将被附加到它。
 
-**source_table_name:** Name of the PostgreSQL table whose contents have to be appended.
+**source_table_name:** PostgreSQL表的名称, 它的内容将被附加。
 
-**source_node_name:** DNS name of the node on which the source table is present ("source" node).
+**source_node_name:** 源表所在节点的DNS名称(“源”节点)。
 
-**source_node_port:** The port on the source worker node on which the database server is listening.
+**source_node_port:** 数据库服务器正在监听的源工作节点上的端口。
 
-Return Value
+返回值
 ****************************
 
-**shard_fill_ratio:** The function returns the fill ratio of the shard which is defined as the ratio of the current shard size to the configuration parameter shard_max_size.
+**shard_fill_ratio:** 该函数返回分片的填充率，它定义为当前分片大小与配置参数shard_max_size的比率。
 
-Example
+示例
 ******************
 
-This example appends the contents of the github_events_local table to the shard having shard id 102089. The table github_events_local is present on the database running on the node master-101 on port number 5432. The function returns the ratio of the the current shard size to the maximum shard size, which is 0.1 indicating that 10% of the shard has been filled.
+本例将github_events_local表的内容附加到id为102089的分片中。表github_events_local出现在端口号为5432的节点master-101上运行的数据库中。该函数返回当前分片大小与最大分片大小的比例，0.1表示已填充10％的分片。
 
 .. code-block:: postgresql
 
@@ -298,24 +286,24 @@ This example appends the contents of the github_events_local table to the shard 
 master_apply_delete_command
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_apply_delete_command() function is used to delete shards which match the criteria specified by the delete command on an *append* distributed table. This function deletes a shard only if all rows in the shard match the delete criteria. As the function uses shard metadata to decide whether or not a shard needs to be deleted, it requires the WHERE clause in the DELETE statement to be on the distribution column. If no condition is specified, then all shards of that table are deleted.
+master_apply_delete_command()函数用于删除与*append*分布式表上的delete命令指定的条件匹配的分片。仅当分片中的所有行都与删除条件匹配时，此函数才会删除分片。由于该函数使用分片元数据来决定是否需要删除分片，因此它要求DELETE语句中的WHERE子句位于分布列上。如果未指定条件，则删除该表的所有分片。
 
-Behind the covers, this function connects to all the worker nodes which have shards matching the delete criteria and sends them a command to drop the selected shards. Then, the function updates the corresponding metadata on the coordinator. If the function is able to successfully delete a shard placement, then the metadata for it is deleted. If a particular placement could not be deleted, then it is marked as TO DELETE. The placements which are marked as TO DELETE are not considered for future queries and can be cleaned up later.
+在幕后，此函数连接到具有与删除条件匹配的分片的所有工作节点，并向它们发送一条命令删除所选分片。然后，该函数更新协调者上的相应元数据。如果该函数能够成功删除分片落点，则会删除其元数据。如果无法删除特定落点，则会将其标记为“删除”。标记为“删除”的落点不会考虑用于将来的查询，可以在以后进行清理。
 
-Arguments
+参数
 *********************
 
-**delete_command:** valid `SQL DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_ command
+**delete_command:** 有效的 `SQL DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_ 命令
 
-Return Value
+返回值
 **************************
 
-**deleted_shard_count:** The function returns the number of shards which matched the criteria and were deleted (or marked for deletion). Note that this is the number of shards and not the number of shard placements.
+**deleted_shard_count:** 该函数返回与条件匹配并被删除（或标记为删除）的分片数。请注意，这是分片的数量，而不是分片落点的数量。
 
-Example
+示例
 *********************
 
-The first example deletes all the shards for the github_events table since no delete criteria is specified. In the second example, only the shards matching the criteria (3 in this case) are deleted.
+第一个示例删除github_events表的所有分片，因为未指定删除条件。在第二个示例中，仅删除与条件匹配的分片（在这种情况下为3）。
 
 .. code-block:: postgresql
 
@@ -334,24 +322,24 @@ The first example deletes all the shards for the github_events table since no de
 master_modify_multiple_shards
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_modify_multiple_shards() function is used to run data modification statements which could span multiple shards. Depending on the value of citus.multi_shard_commit_protocol, the commit can be done in one- or two-phases.
+master_modify_multiple_shards()函数用于运行可能跨越多个分片的数据修改语句。根据citus.multi_shard_commit_protocol的值，提交可以在一个或两个阶段完成。
 
-Limitations:
+限制:
 
-* It cannot be called inside a transaction block
-* It must be called with simple operator expressions only
+* 它不能在事务块内调用
+* 必须仅使用简单的运算符表达式调用它
 
-Arguments
+参数
 **********
 
-**modify_query:** A simple DELETE or UPDATE query as a string.
+**modify_query:** 一个简单的DELETE或UPDATE查询字符串。
 
-Return Value
+返回值
 ************
 
 N/A
 
-Example
+示例
 ********
 
 .. code-block:: postgresql
@@ -359,7 +347,7 @@ Example
   SELECT master_modify_multiple_shards(
     'DELETE FROM customer_delete_protocol WHERE c_custkey > 500 AND c_custkey < 500');
 
-Metadata / Configuration Information
+元数据/配置信息
 ------------------------------------------------------------------------
 
 .. _master_add_node:
@@ -367,31 +355,27 @@ Metadata / Configuration Information
 master_add_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_add_node() function registers a new node addition in the cluster in
-the Citus metadata table pg_dist_node. It also copies reference tables to the new node.
+master_add_node()函数在Citus元数据表pg_dist_node中注册集群中添加的新节点。它还将引用表复制到新节点。
 
-Arguments
+参数
 ************************
 
-**node_name:** DNS name or IP address of the new node to be added.
+**node_name:** 要添加的新节点的DNS名称或IP地址。
 
-**node_port:** The port on which PostgreSQL is listening on the worker node.
+**node_port:** PostgreSQL在工作节点上监听的端口。
 
-**group_id:** A group of one primary server and zero or more secondary
-servers, relevant only for streaming replication.  Default 0
+**group_id:** 一组主服务器和零个或多个辅助服务器，仅与流复制相关。默认值为0
 
-**node_role:** Whether it is 'primary' or 'secondary'. Default 'primary'
+**node_role:** 是'primary'还是'secondary'。默认'primary'
 
-**node_cluster:** The cluster name. Default 'default'
+**node_cluster:** 群集名称。默认'default'
 
-Return Value
+返回值
 ******************************
 
-A tuple which represents a row from :ref:`pg_dist_node
-<pg_dist_node>` table.
+一个元组，表示来自:ref:`pg_dist_node<pg_dist_node>`表的一行。
 
-
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -407,23 +391,23 @@ Example
 master_update_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_update_node() function changes the hostname and port for a node registered in the Citus metadata table :ref:`pg_dist_node <pg_dist_node>`.
+master_update_node()函数更改Citus元数据表:ref:`pg_dist_node <pg_dist_node>`中注册的节点的主机名和端口。
 
-Arguments
+参数
 ************************
 
-**node_id:** id from the pg_dist_node table.
+**node_id:** 来自pg_dist_node表的id。
 
-**node_name:** updated DNS name or IP address for the node.
+**node_name:** updated DNS name or IP address for the node. 要更新的节点DNS名称或IP地址。
 
-**node_port:** the port on which PostgreSQL is listening on the worker node.
+**node_port:** PostgreSQL在工作节点上监听的端口。
 
-Return Value
+返回值
 ******************************
 
 N/A
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -435,31 +419,27 @@ Example
 master_add_inactive_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The :code:`master_add_inactive_node` function, similar to :ref:`master_add_node`,
-registers a new node in :code:`pg_dist_node`. However it marks the new
-node as inactive, meaning no shards will be placed there. Also it does
-*not* copy reference tables to the new node.
+:code:`master_add_inactive_node`函数类似于:ref:`master_add_node`，在:code:`pg_dist_node`中注册一个新节点。但是，它将新节点标记为非活动状态，这意味着不会在其中放置任何分片。此外，它也*没有*复制引用表到新的节点。
 
-Arguments
+参数
 ************************
 
-**node_name:** DNS name or IP address of the new node to be added.
+**node_name:** 要添加的新节点的DNS名或IP地址。
 
-**node_port:** The port on which PostgreSQL is listening on the worker node.
+**node_port:** PostgreSQL在工作节点上监听的端口。
 
-**group_id:** A group of one primary server and zero or more secondary
-servers, relevant only for streaming replication.  Default 0
+**group_id:** 一组一个主服务器和零个或多个辅助服务器，仅与流复制相关。默认值为0
 
-**node_role:** Whether it is 'primary' or 'secondary'. Default 'primary'
+**node_role:** 是'primary'或'secondary'. 默认'primary'
 
-**node_cluster:** The cluster name. Default 'default'
+**node_cluster:** 群集名称。默认'default'
 
-Return Value
+返回值
 ******************************
 
-A tuple which represents a row from :ref:`pg_dist_node <pg_dist_node>` table.
+一个元组，表示来自:ref:`pg_dist_node <pg_dist_node>`表的一行。
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -473,24 +453,21 @@ Example
 master_activate_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The :code:`master_activate_node` function marks a node as active in the
-Citus metadata table :code:`pg_dist_node` and copies reference tables to
-the node. Useful for nodes added via :ref:`master_add_inactive_node`.
+:code:`master_activate_node`函数将节点在Citus元数据表:code:`pg_dist_node`中标记为活动节点，并将引用表复制到节点。对通过master_add_inactive_node添加的节点很有用。
 
-Arguments
+参数
 ************************
 
-**node_name:** DNS name or IP address of the new node to be added.
+**node_name:** 要添加的新节点的DNS名称或IP地址。
 
-**node_port:** The port on which PostgreSQL is listening on the worker node.
+**node_port:**  PostgreSQL在工作节点上侦听的端口。
 
-Return Value
+返回值
 ******************************
 
-A tuple which represents a row from :ref:`pg_dist_node
-<pg_dist_node>` table.
+一个元组，表示来自:ref:`pg_dist_node<pg_dist_node>`表的一行。
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -504,26 +481,21 @@ Example
 master_disable_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The :code:`master_disable_node` function is the opposite of
-:code:`master_activate_node`. It marks a node as inactive in
-the Citus metadata table :code:`pg_dist_node`, removing it from
-the cluster temporarily. The function also deletes all reference table
-placements from the disabled node. To reactivate the node, just run
-:code:`master_activate_node` again.
+:code:`master_disable_node`函数是相反的 master_activate_node。它在Citus元数据表:code:`pg_dist_node`中将节点标记为非活动状态，暂时将其从群集中删除。该功能还会从已禁用的节点中删除所有参考表落点。要重新激活节点，只要再次运行:code:`master_activate_node`。
 
-Arguments
+参数
 ************************
 
-**node_name:** DNS name or IP address of the node to be disabled.
+**node_name:** 要禁用的节点的DNS名称或IP地址。
 
-**node_port:** The port on which PostgreSQL is listening on the worker node.
+**node_port:** PostgreSQL在工作节点上侦听的端口。
 
-Return Value
+返回值
 ******************************
 
 N/A
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -535,29 +507,27 @@ Example
 master_add_secondary_node
 $$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_add_secondary_node() function registers a new secondary
-node in the cluster for an existing primary node. It updates the Citus
-metadata table pg_dist_node.
+master_add_secondary_node()函数在集群中为现有主节点注册新的辅助节点。它更新了Citus元数据表pg_dist_node。
 
-Arguments
+参数
 ************************
 
-**node_name:** DNS name or IP address of the new node to be added.
+**node_name:** 要添加的新节点的DNS名称或IP地址。
 
-**node_port:** The port on which PostgreSQL is listening on the worker node.
+**node_port:** PostgreSQL在工作节点上侦听的端口。
 
-**primary_name:** DNS name or IP address of the primary node for this secondary.
+**primary_name:** 此辅助节点的主节点的DNS名称或IP地址。
 
-**primary_port:** The port on which PostgreSQL is listening on the primary node.
+**primary_port:** PostgreSQL在主节点上侦听的端口。
 
-**node_cluster:** The cluster name. Default 'default'
+**node_cluster:** 群集名称。默认'default'
 
-Return Value
+返回值
 ******************************
 
-A tuple which represents a row from :ref:`pg_dist_node <pg_dist_node>` table.
+一个元组，表示来自:ref:`pg_dist_node <pg_dist_node>`表的一行。
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -572,24 +542,21 @@ Example
 master_remove_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_remove_node() function removes the specified node from the
-pg_dist_node metadata table. This function will error out if there
-are existing shard placements on this node. Thus, before using this
-function, the shards will need to be moved off that node.
+master_remove_node()函数从pg_dist_node元数据表中删除指定的节点。如果此节点上存在分片落点，则此函数将出错。因此，在使用此功能之前，需要将分片移出该节点。
 
-Arguments
+参数
 ************************
 
-**node_name:** DNS name of the node to be removed.
+**node_name:** 要删除的节点的DNS名称。
 
-**node_port:** The port on which PostgreSQL is listening on the worker node.
+**node_port:** PostgreSQL在工作节点上侦听的端口。
 
-Return Value
+返回值
 ******************************
 
 N/A
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -603,24 +570,23 @@ Example
 master_get_active_worker_nodes
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_get_active_worker_nodes() function returns a list of active worker
-host names and port numbers.
+master_get_active_worker_nodes()函数返回活动的工作者主机名和端口号的列表。目前，该函数假定pg_dist_node目录表中的所有工作节点都处于活动状态。
 
-Arguments
+参数
 ************************
 
 N/A
 
-Return Value
+返回值
 ******************************
 
-List of tuples where each tuple contains the following information:
+每个元组包含以下信息的元组列表：
 
-**node_name:** DNS name of the worker node
+**node_name:** 工作节点的DNS名称
 
-**node_port:** Port on the worker node on which the database server is listening
+**node_port:** 数据库服务器正在侦听的工作节点上的端口
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -637,36 +603,37 @@ Example
 master_get_table_metadata
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The master_get_table_metadata() function can be used to return distribution related metadata for a distributed table. This metadata includes the relation id, storage type, distribution method, distribution column, replication count, maximum shard size and the shard placement policy for that table. Behind the covers, this function queries Citus metadata tables to get the required information and concatenates it into a tuple before returning it to the user.
+master_get_table_metadata()
+函数可用于返回分布式表的与分发相关的元数据。此元数据包括该表的关系ID，存储类型，分布方法，分布列，复本计数，最大分片大小和分片放置策略。在幕后，该函数查询Citus元数据表以获得所需的信息，并在将其返回给用户之前将其连接到一个元组中。
 
-Arguments
+参数
 ***********************
 
-**table_name:** Name of the distributed table for which you want to fetch metadata.
+**table_name:** 要为其获取元数据的分布式表的名称。
 
-Return Value
+返回值
 *********************************
 
-A tuple containing the following information:
+包含以下信息的元组：
 
-**logical_relid:** Oid of the distributed table. This values references the relfilenode column in the pg_class system catalog table.
+**logical_relid:** 分布式表的Oid。此值引用pg_class系统目录表中的relfilenode列。
 
-**part_storage_type:** Type of storage used for the table. May be 't' (standard table), 'f' (foreign table) or 'c' (columnar table).
+**part_storage_type:** 用于表的存储类型。可能是't'(standard table), 'f'(foreign table)或 'c'(columnar table)。
 
-**part_method:** Distribution method used for the table. May be 'a' (append), or 'h' (hash).
+**part_method:** 表格使用的分布方法。可以是'a'(append)或'h'(hash)。
 
-**part_key:** Distribution column for the table.
+**part_key:** 表的分布列。
 
-**part_replica_count:** Current shard replication count.
+**part_replica_count:** 当前分片复本计数。
 
-**part_max_size:** Current maximum shard size in bytes.
+**part_max_size:** 当前最大分片大小(以字节为单位)。
 
-**part_placement_policy:** Shard placement policy used for placing the table’s shards. May be 1 (local-node-first) or 2 (round-robin).
+**part_placement_policy:** 分片放置策略，用于放置表的分片。可以是1(local-node-first)或2(round-robin)。
 
-Example
+示例
 *************************
 
-The example below fetches and displays the table metadata for the github_events table.
+下面的示例获取并显示github_events表的表元数据。
 
 .. code-block:: postgresql
 
@@ -681,21 +648,22 @@ The example below fetches and displays the table metadata for the github_events 
 get_shard_id_for_distribution_column
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus assigns every row of a distributed table to a shard based on the value of the row's distribution column and the table's method of distribution. In most cases the precise mapping is a low-level detail that the database administrator can ignore. However it can be useful to determine a row's shard, either for manual database maintenance tasks or just to satisfy curiosity. The :code:`get_shard_id_for_distribution_column` function provides this info for hash- and range-distributed tables as well as reference tables. It does not work for the append distribution.
+Citus根据行的分布列的值和表的分布方法将分布式表的每一行分配给分片。在大多数情况下，精确的映射是数据库管理员可以忽略的底层细节。但是，确定行的分片可能很有用，既可用于手动数据库维护任务，也可用于满足好奇心。该:code:`get_shard_id_for_distribution_column`函数为hash-和range-分布表以及引用表提供此信息。它不适用于append分布。
 
-Arguments
+参数
 ************************
 
-**table_name:** The distributed table.
+**table_name:** 分布式表。
 
-**distribution_value:** The value of the distribution column.
+**distribution_value:** 分发列的值。
 
-Return Value
+返回值
 ******************************
 
+分片ID Citus与给定表的分发列值相关联。
 The shard id Citus associates with the distribution column value for the given table.
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -710,23 +678,23 @@ Example
 column_to_column_name
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Translates the :code:`partkey` column of :code:`pg_dist_partition` into a textual column name. This is useful to determine the distribution column of a distributed table.
+将:code:`pg_dist_partition`的:code:`partkey`列转换为文本列名称。这对于确定分布式表的分发列很有用。
 
-For a more detailed discussion, see :ref:`finding_dist_col`.
+有关更详细的讨论，请参阅:ref:`finding_dist_col`。
 
-Arguments
+参数
 ************************
 
-**table_name:** The distributed table.
+**table_name:** 分布式表。
 
-**column_var_text:** The value of :code:`partkey` in the :code:`pg_dist_partition` table.
+**column_var_text:** :code:`pg_dist_partition` 表中:code:`partkey`列的值.
 
-Return Value
+返回值
 ******************************
 
-The name of :code:`table_name`'s distribution column.
+:code:`table_name`'的分发列的名称。
 
-Example
+示例
 ***********************
 
 .. code-block:: postgresql
@@ -750,19 +718,19 @@ Output:
 citus_relation_size
 $$$$$$$$$$$$$$$$$$$
 
-Get the disk space used by all the shards of the specified distributed table. This includes the size of the "main fork," but excludes the visibility map and free space map for the shards.
+获取指定分布式表的所有分片使用的磁盘空间。这包括"main fork,"的大小，但不包括分片的visibility map和free space map。
 
-Arguments
+参数
 *********
 
-**logicalrelid:** the name of a distributed table.
+**logicalrelid:** 分布式表的名称。
 
-Return Value
+返回值
 ************
 
-Size in bytes as a bigint.
+以字节为单位的大小。
 
-Example
+示例
 *******
 
 .. code-block:: postgresql
@@ -778,19 +746,20 @@ Example
 citus_table_size
 $$$$$$$$$$$$$$$$
 
+获取指定分布式表的所有分片使用的磁盘空间，不包括索引（但包括TOAST, free space map, and visibility map）。
 Get the disk space used by all the shards of the specified distributed table, excluding indexes (but including TOAST, free space map, and visibility map).
 
-Arguments
+参数
 *********
 
-**logicalrelid:** the name of a distributed table.
+**logicalrelid:** 分布式表的名称。
 
-Return Value
+返回值
 ************
 
-Size in bytes as a bigint.
+以字节为单位的大小。
 
-Example
+示例
 *******
 
 .. code-block:: postgresql
@@ -806,19 +775,20 @@ Example
 citus_total_relation_size
 $$$$$$$$$$$$$$$$$$$$$$$$$
 
+获取指定分布式表的所有分片使用的总磁盘空间，包括所有索引和TOAST数据。
 Get the total disk space used by the all the shards of the specified distributed table, including all indexes and TOAST data.
 
-Arguments
+参数
 *********
 
-**logicalrelid:** the name of a distributed table.
+**logicalrelid:** 分布式表的名称。
 
-Return Value
+返回值
 ************
 
-Size in bytes as a bigint.
+以字节为单位的大小。
 
-Example
+示例
 *******
 
 .. code-block:: postgresql
@@ -835,52 +805,52 @@ Example
 citus_stat_statements_reset
 $$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Removes all rows from :ref:`citus_stat_statements <citus_stat_statements>`. Note that this works independently from ``pg_stat_statements_reset()``. To reset all stats, call both functions.
+从:ref:`citus_stat_statements <citus_stat_statements>`中删除所有行。请注意，这独立于``pg_stat_statements_reset()``。要重置所有统计数据，请调用这两个函数。
 
-Arguments
+参数
 *********
 
 N/A
 
-Return Value
+返回值
 ************
 
 None
 
 .. _cluster_management_functions:
 
-Cluster Management And Repair Functions
+集群管理和修复功能
 ----------------------------------------
 
 master_copy_shard_placement
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-If a shard placement fails to be updated during a modification command or a DDL operation, then it gets marked as inactive. The master_copy_shard_placement function can then be called to repair an inactive shard placement using data from a healthy placement.
+如果在修改命令或DDL操作期间无法更新分片位置，则会将其标记为非活动状态。然后可以使用来自健康位置的数据调用master_copy_shard_placement函数来修复非活动的分片位置。
 
-To repair a shard, the function first drops the unhealthy shard placement and recreates it using the schema on the coordinator. Once the shard placement is created, the function copies data from the healthy placement and updates the metadata to mark the new shard placement as healthy. This function ensures that the shard will be protected from any concurrent modifications during the repair.
+要修复分片，该函数首先删除不健康的分片位置并使用协调器上的模式重新创建它。创建分片位置后，该函数将从正常位置中复制数据并更新元数据，以将新分片放置标记为正常。此功能可确保在修复期间保护分片不受任何并发修改的影响。
 
-Arguments
+参数
 **********
 
-**shard_id:** Id of the shard to be repaired.
+**shard_id:** 要修复的分片的ID。
 
-**source_node_name:** DNS name of the node on which the healthy shard placement is present ("source" node).
+**source_node_name:** 存在健康分片位置的节点的DNS名称("source" 节点)。
 
-**source_node_port:** The port on the source worker node on which the database server is listening.
+**source_node_port:** 数据库服务器正在侦听的源工作节点上的端口。
 
-**target_node_name:** DNS name of the node on which the invalid shard placement is present ("target" node).
+**target_node_name:** 存在无效分片位置的节点的DNS名称("target"节点)。
 
-**target_node_port:** The port on the target worker node on which the database server is listening.
+**target_node_port:** 数据库服务器正在侦听的目标工作节点上的端口。
 
-Return Value
+返回值
 ************
 
 N/A
 
-Example
+示例
 ********
 
-The example below will repair an inactive shard placement of shard 12345 which is present on the database server running on 'bad_host' on port 5432. To repair it, it will use data from a healthy shard placement present on the server running on 'good_host' on port 5432.
+下面的示例将修复shard 12345的非活动分片位置，该分片位于'bad_host'数据库服务器上, 端口5432。要修复它，它将使用'good_host'服务器上存在的健康分片放置中的数据, 端口5432。
 
 .. code-block:: postgresql
 
@@ -889,41 +859,42 @@ The example below will repair an inactive shard placement of shard 12345 which i
 master_move_shard_placement
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
+.. 注意::
 
-  The master_move_shard_placement function is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+  master_move_shard_placement函数是Citus Enterprise的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_ 获取此功能。
 
-This function moves a given shard (and shards co-located with it) from one node to another. It is typically used indirectly during shard rebalancing rather than being called directly by a database administrator.
+此函数将给定的分片（以及与之共址的分片）从一个节点移动到另一个节点。它通常在分片重新平衡期间间接使用，而不是由数据库管理员直接调用。
 
-There are two ways to move the data: blocking or nonblocking. The blocking approach means that during the move all modifications to the shard are paused. The second way, which avoids blocking shard writes, relies on Postgres 10 logical replication.
+有两种方法可以移动数据：阻塞或非阻塞。阻塞方法意味着在移动期间暂停对分片的所有修改。第二种方法，它避免阻止分片写入，依赖于Postgres 10的逻辑复制。
 
-After a successful move operation, shards in the source node get deleted. If the move fails at any point, this function throws an error and leaves the source and target nodes unchanged.
+成功移动操作后，源节点中的分片将被删除。如果移动在任何时间点失败，则此函数会抛出错误并使源节点和目标节点保持不变。
 
-Arguments
+参数
 **********
 
-**shard_id:** Id of the shard to be moved.
+**shard_id:** 要移动的分片的ID。
 
-**source_node_name:** DNS name of the node on which the healthy shard placement is present ("source" node).
+**source_node_name:** 存在健康分片位置的节点的DNS名称（“源”节点）。
 
-**source_node_port:** The port on the source worker node on which the database server is listening.
+**source_node_port:** 数据库服务器正在侦听的源工作节点上的端口。
 
-**target_node_name:** DNS name of the node on which the invalid shard placement is present ("target" node).
+**target_node_name:** 存在无效分片位置的节点的DNS名称（“目标”节点）。
 
-**target_node_port:** The port on the target worker node on which the database server is listening.
+**target_node_port:** 数据库服务器正在侦听的目标工作节点上的端口。
 
-**shard_transfer_mode:** (Optional) Specify the method of replication, whether to use PostgreSQL logical replication or a cross-worker COPY command. The possible values are:
+**shard_transfer_mode:** (可选) 指定复制方法，是否使用PostgreSQL逻辑复制或跨工作者COPY命令。可能的值是：
+Specify the method of replication, whether to use PostgreSQL logical replication or a cross-worker COPY command. The possible values are:
 
-  * ``auto``: Require replica identity if logical replication is possible, otherwise use legacy behaviour (e.g. for shard repair, PostgreSQL 9.6). This is the default value.
-  * ``force_logical``: Use logical replication even if the table doesn't have a replica identity. Any concurrent update/delete statements to the table will fail during replication.
-  * ``block_writes``: Use COPY (blocking writes) for tables lacking primary key or replica identity.
+  * ``auto``: 如果可以进行逻辑复制，则需要副本标识，否则使用旧行为（例如，用于分片修复，PostgreSQL 9.6）。这是默认值。
+  * ``force_logical``: 即使表没有副本标识，也请使用逻辑复制。在复制期间，对表的任何并发更新/删除语句都将失败。
+  * ``block_writes``: 对缺少主键或副本标识的表使用COPY（阻止写入）。
 
-Return Value
+返回值
 ************
 
 N/A
 
-Example
+示例
 ********
 
 .. code-block:: postgresql
@@ -935,43 +906,45 @@ Example
 rebalance_table_shards
 $$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
-  The rebalance_table_shards function is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+.. 注意::
+  rebalance_table_shards 函数是Citus Enterprise的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_ 获取此功能。
 
-The rebalance_table_shards() function moves shards of the given table to make them evenly distributed among the workers. The function first calculates the list of moves it needs to make in order to ensure that the cluster is balanced within the given threshold. Then, it moves shard placements one by one from the source node to the destination node and updates the corresponding shard metadata to reflect the move.
+rebalance_table_shards()函数移动给定表的分片，使它们在工作者之间均匀分布。
+该函数首先计算它需要进行的移动列表，以确保集群在给定阈值内保持平衡。
+然后，它将分片位置从源节点逐个移动到目标节点，并更新相应的分片元数据以反映移动。
 
-Arguments
+参数
 **************************
 
-**table_name:** The name of the table whose shards need to be rebalanced.
+**table_name:** 需要重新平衡其分片的表的名称。
 
-**threshold:** (Optional) A float number between 0.0 and 1.0 which indicates the maximum difference ratio of node utilization from average utilization. For example, specifying 0.1 will cause the shard rebalancer to attempt to balance all nodes to hold the same number of shards ±10%. Specifically, the shard rebalancer will try to converge utilization of all worker nodes to the (1 - threshold) * average_utilization ... (1 + threshold) * average_utilization range.
+**threshold:** (可选)介于0.0和1.0之间的浮点数，表示节点利用率与平均利用率的最大差异比率。例如，指定0.1将导致分片重新平衡器尝试平衡所有节点以保持相同数量的分片±10％。具体来说，分片重新平衡器将尝试将所有工作节点的利用率收敛到(1 - threshold) * average_utilization ... (1 + threshold) * average_utilization 范围。
 
-**max_shard_moves:** (Optional) The maximum number of shards to move.
+**max_shard_moves:** (可选)要移动的最大分片数。
 
-**excluded_shard_list:** (Optional) Identifiers of shards which shouldn't be moved during the rebalance operation.
+**excluded_shard_list:** (可选)在重新平衡操作期间不应移动的分片的标识符。
 
-**shard_transfer_mode:** (Optional) Specify the method of replication, whether to use PostgreSQL logical replication or a cross-worker COPY command. The possible values are:
+**shard_transfer_mode:** (可选)指定复制方法，是否使用PostgreSQL逻辑复制或跨工作者COPY命令。可能的值是：
 
-  * ``auto``: Require replica identity if logical replication is possible, otherwise use legacy behaviour (e.g. for shard repair, PostgreSQL 9.6). This is the default value.
-  * ``force_logical``: Use logical replication even if the table doesn't have a replica identity. Any concurrent update/delete statements to the table will fail during replication.
-  * ``block_writes``: Use COPY (blocking writes) for tables lacking primary key or replica identity.
+  * ``auto``: 如果可以进行逻辑复制，则需要副本标识，否则使用旧行为（例如，用于分片修复，PostgreSQL 9.6）。这是默认值。
+  * ``force_logical``: 即使表没有副本标识，也请使用逻辑复制。在复制期间，对表的任何并发更新/删除语句都将失败。
+  * ``block_writes``: 对缺少主键或副本标识的表使用COPY（阻止写入）。
 
-Return Value
+返回值
 *********************************
 
 N/A
 
-Example
+示例
 **************************
 
-The example below will attempt to rebalance the shards of the github_events table within the default threshold.
+以下示例将尝试在默认阈值内重新平衡github_events表的分片。
 
 .. code-block:: postgresql
 
 	SELECT rebalance_table_shards('github_events');
 
-This example usage will attempt to rebalance the github_events table without moving shards with id 1 and 2.
+此示例用法将尝试重新平衡github_events表，而不移动ID为1和2的分片。
 
 .. code-block:: postgresql
 
@@ -982,33 +955,33 @@ This example usage will attempt to rebalance the github_events table without mov
 get_rebalance_progress
 $$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
+.. 注意::
 
-  The get_rebalance_progress() function is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+  get_rebalance_progress()函数是Citus Enterprise的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_ 获取此功能。
 
-Once a shard rebalance begins, the ``get_rebalance_progress()`` function lists the progress of every shard involved. It monitors the moves planned and executed by ``rebalance_table_shards()``.
+一旦分片重新平衡开始，该``get_rebalance_progress()``函数将列出所涉及的每个分片的进度。它监视移动计划和用``rebalance_table_shards()``执行。
 
-Arguments
+参数
 **************************
 
 N/A
 
-Return Value
+返回值
 *********************************
 
-Tuples containing these columns:
+元组, 包含这些列：
 
-* **sessionid**: Postgres PID of the rebalance monitor
-* **table_name**: The table whose shards are moving
-* **shardid**: The shard in question
-* **shard_size**: Size in bytes
-* **sourcename**: Hostname of the source node
-* **sourceport**: Port of the source node
-* **targetname**: Hostname of the destination node
-* **targetport**: Port of the destination node
-* **progress**: 0 = waiting to be moved; 1 = moving; 2 = complete
+* **sessionid**: 重新平衡监视器的Postgres PID
+* **table_name**: 分片正在移动的表
+* **shardid**: 有问题的分片
+* **shard_size**: 大小（以字节为单位）
+* **sourcename**: 源节点的主机名
+* **sourceport**: 源节点的端口
+* **targetname**: 目标节点的主机名
+* **targetport**: 目标节点的端口
+* **progress**: 0 = 等待移动; 1 = 移动中; 2 = 完成
 
-Example
+示例
 **************************
 
 .. code-block:: sql
@@ -1029,37 +1002,37 @@ Example
 replicate_table_shards
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
-  The replicate_table_shards function is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+.. 注意::
+  replicate_table_shards 函数是Citus Enterprise的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_ 获取此功能。
 
-The replicate_table_shards() function replicates the under-replicated shards of the given table. The function first calculates the list of under-replicated shards and locations from which they can be fetched for replication. The function then copies over those shards and updates the corresponding shard metadata to reflect the copy.
+replicate_table_shards()函数复制给定表的未复制的分片。该函数首先计算未复制的分片列表以及从中获取它们以进行复制的位置。然后，该函数复制这些分片并更新相应的分片元数据以反映副本。
 
-Arguments
+参数
 *************************
 
-**table_name:** The name of the table whose shards need to be replicated.
+**table_name:** 需要复制其分片的表的名称。
 
-**shard_replication_factor:** (Optional) The desired replication factor to achieve for each shard.
+**shard_replication_factor:** (可选)为每个分片获得的所需复制因子。
 
-**max_shard_copies:** (Optional) Maximum number of shards to copy to reach the desired replication factor.
+**max_shard_copies:** (可选)要复制以达到所需复制因子的最大分片数。
 
-**excluded_shard_list:** (Optional) Identifiers of shards which shouldn't be copied during the replication operation.
+**excluded_shard_list:** (可选)在复制操作期间不应复制的分片标识符。
 
-Return Value
+返回值
 ***************************
 
 N/A
 
-Examples
+示例s
 **************************
 
-The example below will attempt to replicate the shards of the github_events table to shard_replication_factor.
+下面的示例将尝试将github_events表的分片复制到shard_replication_factor。
 
 .. code-block:: postgresql
 
 	SELECT replicate_table_shards('github_events');
 
-This example will attempt to bring the shards of the github_events table to the desired replication factor with a maximum of 10 shard copies. This means that the rebalancer will copy only a maximum of 10 shards in its attempt to reach the desired replication factor.
+此示例将尝试将github_events表的分片带到所需的复制因子，最多包含10个分片副本。这意味着重新平衡器在尝试达到所需的复制因子时，最多只能复制10个分片。
 
 .. code-block:: postgresql
 
@@ -1070,31 +1043,31 @@ This example will attempt to bring the shards of the github_events table to the 
 isolate_tenant_to_new_shard
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
-  The isolate_tenant_to_new_shard function is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+.. 注意::
+  isolate_tenant_to_new_shard函数是Citus Enterprise的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_ 获取此功能。
 
-This function creates a new shard to hold rows with a specific single value in the distribution column. It is especially handy for the multi-tenant Citus use case, where a large tenant can be placed alone on its own shard and ultimately its own physical node.
+这个函数创建一个新的切分来保存分布列中具有特定单个值的行。对于多租户Citus用例来说尤其方便，其中大租户可以单独放置在自己的分片上，最终放置在自己的物理节点上。
 
-For a more in-depth discussion, see :ref:`tenant_isolation`.
+有关更深入的讨论，请参阅:ref:`tenant_isolation`。
 
-Arguments
+参数
 *************************
 
-**table_name:** The name of the table to get a new shard.
+**table_name:** 获取新分片的表的名称。
 
-**tenant_id:** The value of the distribution column which will be assigned to the new shard.
+**tenant_id:** 将分配给新分片的分布列的值。
 
-**cascade_option:** (Optional) When set to "CASCADE," also isolates a shard from all tables in the current table's :ref:`colocation_groups`.
+**cascade_option:** (可选)当设置为"CASCADE,"时，还会将分片与当前表的:ref:`colocation_groups`中的所有表隔离。
 
-Return Value
+返回值
 ***************************
 
-**shard_id:** The function returns the unique id assigned to the newly created shard.
+**shard_id:** 该函数返回分配给新创建的分片的唯一ID。
 
-Examples
+示例s
 **************************
 
-Create a new shard to hold the lineitems for tenant 135:
+创建一个新的分片以保存租户135的lineitems：
 
 .. code-block:: postgresql
 
@@ -1111,19 +1084,19 @@ Create a new shard to hold the lineitems for tenant 135:
 citus_create_restore_point
 $$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Temporarily blocks writes to the cluster, and creates a named restore point on all nodes. This function is similar to `pg_create_restore_point <https://www.postgresql.org/docs/10/static/functions-admin.html#FUNCTIONS-ADMIN-BACKUP>`_, but applies to all nodes and makes sure the restore point is consistent across them. This function is well suited to doing point-in-time recovery, and cluster forking.
+暂时阻止写入群集，并在所有节点上创建命名还原点。此函数类似于`pg_create_restore_point <https://www.postgresql.org/docs/10/static/functions-admin.html#FUNCTIONS-ADMIN-BACKUP>`_，但适用于所有节点，并确保还原点在它们之间保持一致。此功能非常适合进行时间点恢复和群集分叉。
 
-Arguments
+参数
 *************************
 
-**name:** The name of the restore point to create.
+**name:** 要创建的还原点的名称。
 
-Return Value
+返回值
 ***************************
 
-**coordinator_lsn:** Log sequence number of the restore point in the coordinator node WAL.
+**coordinator_lsn:** 协调器节点WAL中的还原点的日志序列号。
 
-Examples
+示例s
 **************************
 
 .. code-block:: postgresql
