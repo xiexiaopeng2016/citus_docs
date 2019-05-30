@@ -220,23 +220,22 @@ pg_dist_node表包含有关集群中工作节点的信息。
 
 .. _colocation_group_table:
 
-Co-location group table
+共址组表
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The pg_dist_colocation table contains information about which tables' shards should be placed together, or :ref:`co-located <colocation>`. When two tables are in the same co-location group, Citus ensures shards with the same partition values will be placed on the same worker nodes. This enables join optimizations, certain distributed rollups, and foreign key support. Shard co-location is inferred when the shard counts, replication factors, and partition column types all match between two tables; however, a custom co-location group may be specified when creating a distributed table, if so desired.
+pg_dist_colocation表包含有关哪些表的分片应放在一起或:ref:`co-located <colocation>`的信息。当两个表位于同一个共址组时，Citus会确保具有相同分区值的分片将放置在同一个工作节点上。这使得连接优化，某些分布式汇总和外键支持成为可能。当分片计数，复制因子和分区列类型在两个表之间都匹配时，推断出分片共址; 但是，如果需要，可以在创建分布式表时指定自定义共址组。
 
-+------------------------+----------------------+---------------------------------------------------------------------------+
-|      Name              |         Type         |       Description                                                         |
-+========================+======================+===========================================================================+
-| colocationid           |         int          | | Unique identifier for the co-location group this row corresponds to.    |
-+------------------------+----------------------+---------------------------------------------------------------------------+
-| shardcount             |         int          | | Shard count for all tables in this co-location group                    |
-+------------------------+----------------------+---------------------------------------------------------------------------+
-| replicationfactor      |         int          | | Replication factor for all tables in this co-location group.            |
-+------------------------+----------------------+---------------------------------------------------------------------------+
-| distributioncolumntype |         oid          | | The type of the distribution column for all tables in this              |
-|                        |                      | | co-location group.                                                      |
-+------------------------+----------------------+---------------------------------------------------------------------------+
++------------------------+----------------------+-------------------------------------------------------------------+
+|      Name              |         Type         |       Description                                                 |
++========================+======================+===================================================================+
+| colocationid           |         int          | | 此行对应的协同定位组的唯一标识符。                              |
++------------------------+----------------------+-------------------------------------------------------------------+
+| shardcount             |         int          | | 此共址组中所有表的分片计数                                      |
++------------------------+----------------------+-------------------------------------------------------------------+
+| replicationfactor      |         int          | | 此协同定位组中所有表的复制因子。                                |
++------------------------+----------------------+-------------------------------------------------------------------+
+| distributioncolumntype |         oid          | | 此处所有表的分发列类型共址组。                                  |
++------------------------+----------------------+-------------------------------------------------------------------+
 
 ::
 
@@ -248,35 +247,33 @@ The pg_dist_colocation table contains information about which tables' shards sho
 
 .. _citus_stat_statements:
 
-Query statistics table
+查询统计表
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+.. 注意::
+  citus_stat_statements视图是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
 
-  The citus_stat_statements view is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+Citus提供``citus_stat_statements``有关如何执行查询以及为谁执行查询的统计信息。它与PostgreSQL中的`pg_stat_statements <https://www.postgresql.org/docs/current/static/pgstatstatements.html>`_视图类似（并且可以与之结合），该视图跟踪有关查询速度的统计信息。
 
-Citus provides ``citus_stat_statements`` for stats about how queries are being executed, and for whom. It's analogous to (and can be joined with) the `pg_stat_statements <https://www.postgresql.org/docs/current/static/pgstatstatements.html>`_ view in PostgreSQL which tracks statistics about query speed.
-
-This view can trace queries to originating tenants in a multi-tenant application, which helps for deciding when to do :ref:`tenant_isolation`.
+此视图可以跟踪多租户应用程序中的原始租户的查询，这有助于决定何时进行:ref:`tenant_isolation`。
 
 +----------------+--------+---------------------------------------------------------+
 | Name           | Type   | Description                                             |
 +================+========+=========================================================+
-| queryid        | bigint | identifier (good for pg_stat_statements joins)          |
+| queryid        | bigint | 标识符(适用于pg_stat_statements连接)                    |
 +----------------+--------+---------------------------------------------------------+
-| userid         | oid    | user who ran the query                                  |
+| userid         | oid    | 运行查询的用户                                          |
 +----------------+--------+---------------------------------------------------------+
-| dbid           | oid    | database instance of coordinator                        |
+| dbid           | oid    | 协调者的数据库实例                                      |
 +----------------+--------+---------------------------------------------------------+
-| query          | text   | anonymized query string                                 |
+| query          | text   | 匿名查询字符串                                          |
 +----------------+--------+---------------------------------------------------------+
-| executor       | text   | Citus :ref:`executor <distributed_query_executor>` used:|
+| executor       | text   | Citus :ref:`执行者 <distributed_query_executor>`使用:   |
 |                |        | real-time, task-tracker, router, or insert-select       |
 +----------------+--------+---------------------------------------------------------+
-| partition_key  | text   | value of distribution column in router-executed queries,|
-|                |        | else NULL                                               |
+| partition_key  | text   | 路由器执行的查询中的分发列的值，否则为NULL              |
 +----------------+--------+---------------------------------------------------------+
-| calls          | bigint | number of times the query was run                       |
+| calls          | bigint | 查询运行的次数                                          |
 +----------------+--------+---------------------------------------------------------+
 
 .. code-block:: sql
@@ -295,7 +292,7 @@ This view can trace queries to originating tenants in a multi-tenant application
 
   select * from citus_stat_statements;
 
-Results:
+结果:
 
 ::
 
@@ -307,12 +304,12 @@ Results:
   │ 3233520930 │  16384 │ 16385 │ insert into foo select generate_series($1,$2) │ insert-select │ NULL          │     1 │
   └────────────┴────────┴───────┴───────────────────────────────────────────────┴───────────────┴───────────────┴───────┘
 
-Caveats:
+注意事项:
 
-* The stats data is not replicated, and won't survive database crashes or failover
-* It's a coordinator node feature, with no :ref:`Citus MX <mx>` support
-* Tracks a limited number of queries, set by the ``pg_stat_statements.max`` GUC (default 5000)
-* To truncate the table, use the ``citus_stat_statements_reset()`` function
+* 统计数据不会被复制，并且不会在数据库崩溃或故障转移后继续存在
+* 它是协调者节点功能，没有:ref:`Citus MX <mx>`支持
+* 跟踪由``pg_stat_statements.max`` GUC 设置的有限数量的查询（默认5000）
+* 要截断表，请使用该``citus_stat_statements_reset()``函数
 
 Distributed Query Activity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -405,7 +402,7 @@ This query requires information from all shards. Some of the information is in s
 
 The ``query`` field shows data being copied out of the shard to be counted.
 
-.. note::
+.. 注意::
 
   If a router query (e.g. single-tenant in a multi-tenant application, ``SELECT * FROM table WHERE tenant_id = X``) is executed without a transaction block, then master_query_host_name and master_query_host_port columns will be NULL in citus_worker_stat_activity.
 
@@ -459,9 +456,9 @@ Citus has other informational tables and views which are accessible on all nodes
 Connection Credentials Table
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+.. 注意::
 
-  This table is a part of Citus Enterprise Edition. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+  This table 是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
 
 The ``pg_dist_authinfo`` table holds authentication parameters used by Citus nodes to connect to one another.
 
@@ -493,9 +490,9 @@ The ``nodeid`` column can also take the special values 0 and -1, which mean *all
 Connection Pooling Credentials
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+.. 注意::
 
-  This table is a part of Citus Enterprise Edition. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+  This table 是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
 
 If you want to use a connection pooler to connect to a node, you can specify the pooler options using ``pg_dist_poolinfo``. This metadata table holds the host, port and database name for Citus to use when connecting to a node through a pooler.
 
@@ -509,7 +506,7 @@ If pool information is present, Citus will try to use these values instead of se
 | poolinfo | text    | Space-separated parameters: host, port, or dbname |
 +----------+---------+---------------------------------------------------+
 
-.. note::
+.. 注意::
 
    In some situations Citus ignores the settings in pg_dist_poolinfo. For instance :ref:`Shard rebalancing <shard_rebalancing>` is not compatible with connection poolers such as pgbouncer. In these scenarios Citus will use a direct connection.
 
@@ -525,7 +522,7 @@ If pool information is present, Citus will try to use these values instead of se
 Shards and Indices on MX Workers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+.. 注意::
 
    The citus_shards_on_worker and citus_shard_indexes_on_worker views are relevant in Citus MX only. In the non-MX scenario they contain no rows.
 
