@@ -311,20 +311,20 @@ Citus提供``citus_stat_statements``有关如何执行查询以及为谁执行�
 * 跟踪由``pg_stat_statements.max`` GUC 设置的有限数量的查询（默认5000）
 * 要截断表，请使用该``citus_stat_statements_reset()``函数
 
-Distributed Query Activity
+分布式查询活动
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With :ref:`mx` users can execute distributed queries from any node. Examining the standard Postgres `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ view on the coordinator won't include those worker-initiated queries. Also queries might get blocked on row-level locks on one of the shards on a worker node. If that happens then those queries would not show up in `pg_locks <https://www.postgresql.org/docs/current/static/view-pg-locks.html>`_ on the Citus coordinator node.
+使用Citus MX，用户可以从任何节点执行分布式查询。检查协调者上的标准Postgres `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_视图将不包括那些工作者发起的查询。此外，查询可能会在工作节点上的某个分片上的行级锁上被阻塞。如果发生这种情况，那么这些查询将不会显示在Citus协调器者节点上的`pg_locks <https://www.postgresql.org/docs/current/static/view-pg-locks.html>`_中。
 
-Citus provides special views to watch queries and locks throughout the cluster, including shard-specific queries used internally to build results for distributed queries.
+Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内部使用的特定于分区的查询来构建分布式查询的结果。
 
-* **citus_dist_stat_activity**: shows the distributed queries that are executing on all nodes. A superset of ``pg_stat_activity``, usable wherever the latter is.
-* **citus_worker_stat_activity**: shows queries on workers, including fragment queries against individual shards.
-* **citus_lock_waits**: Blocked queries throughout the cluster.
+* **citus_dist_stat_activity**: 显示在所有节点上执行的分布式查询。一个超集``pg_stat_activity``，可以在后者的任何地方使用。
+* **citus_worker_stat_activity**: 显示工作者上的查询，包括针对各个分片的片段查询。
+* **citus_lock_waits**: 整个群集中的阻塞的查询。
 
-The first two views include all columns of `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ plus the host host/port of the worker that initiated the query and the host/port of the coordinator node of the cluster.
+前两个视图包括`pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_的所有列以及发起查询的工作者的主机主机/端口以及集群的协调器节点的主机/端口。
 
-For example, consider counting the rows in a distributed table:
+例如，考虑计算分布式表中的行：
 
 .. code-block:: postgres
 
@@ -332,7 +332,7 @@ For example, consider counting the rows in a distributed table:
 
    SELECT count(*) FROM users_table;
 
-We can see the query appear in ``citus_dist_stat_activity``:
+我们可以看到查询显示在``citus_dist_stat_activity``：
 
 .. code-block:: postgres
 
@@ -366,7 +366,8 @@ We can see the query appear in ``citus_dist_stat_activity``:
    query                  | SELECT count(*) FROM users_table;
    backend_type           | client backend
 
-This query requires information from all shards. Some of the information is in shard ``users_table_102038`` which happens to be stored in localhost:9700. We can see a query accessing the shard by looking at the ``citus_worker_stat_activity`` view:
+此查询需要来自所有分片的信息。一些信息在分片users_table_102038中，恰好存储在localhost:9700中。
+我们可以看到一个查询访问分片, 通过查看``citus_worker_stat_activity``视图:
 
 .. code-block:: postgres
 
@@ -400,13 +401,13 @@ This query requires information from all shards. Some of the information is in s
    query                  | COPY (SELECT count(*) AS count FROM users_table_102038 users_table WHERE true) TO STDOUT
    backend_type           | client backend
 
-The ``query`` field shows data being copied out of the shard to be counted.
+该``query``字段显示从要计数的分片中复制的数据。
 
 .. 注意::
 
-  If a router query (e.g. single-tenant in a multi-tenant application, ``SELECT * FROM table WHERE tenant_id = X``) is executed without a transaction block, then master_query_host_name and master_query_host_port columns will be NULL in citus_worker_stat_activity.
+  如果在没有事务块的情况下执行路由器查询(例如，多租户应用程序中的单租户, ``SELECT * FROM table WHERE tenant_id = X``)，则 citus_worker_stat_activity 中的 master_query_host_name 和 master_query_host_port 列将为NULL。
 
-To see how ``citus_lock_waits`` works, we can generate a locking situation manually. First we'll set up a test table from the coordinator:
+要了解其``citus_lock_waits``工作原理，我们可以手动生成锁定情况。首先，我们将从协调员建立一个测试表：
 
 .. code-block:: postgres
 
@@ -414,7 +415,7 @@ To see how ``citus_lock_waits`` works, we can generate a locking situation manua
      SELECT i, 0 AS j FROM generate_series(1,10) AS i;
    SELECT create_distributed_table('numbers', 'i');
 
-Then, using two sessions on the coordinator, we can run this sequence of statements:
+然后，在协调者上使用两个会话，我们可以运行以下语句序列：
 
 .. code-block:: postgres
 
@@ -426,7 +427,7 @@ Then, using two sessions on the coordinator, we can run this sequence of stateme
                                           UPDATE numbers SET j = 3 WHERE i = 1;
                                           -- (this blocks)
 
-The ``citus_lock_waits`` view shows the situation.
+该``citus_lock_waits``视图显示了这种情况。
 
 .. code-block:: postgres
 
@@ -444,39 +445,41 @@ The ``citus_lock_waits`` view shows the situation.
    waiting_node_port                     | 5432
    blocking_node_port                    | 5432
 
-In this example the queries originated on the coordinator, but the view can also list locks between queries originating on workers (executed with Citus MX for instance).
+在此示例中，查询源自协调者，但视图还可以列出源自工作者的查询之间的锁定(例如，使用Citus MX执行)。
 
-Tables on all Nodes
+所有节点上的表
 -------------------
 
-Citus has other informational tables and views which are accessible on all nodes, not just the coordinator.
+Citus还有其他信息表和视图，可以在所有节点上访问，而不仅仅是协调者。
 
 .. _pg_dist_authinfo:
 
-Connection Credentials Table
+连接凭证表
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. 注意::
 
-  This table 是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
+  此表是是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
 
-The ``pg_dist_authinfo`` table holds authentication parameters used by Citus nodes to connect to one another.
+该``pg_dist_authinfo``表包含Citus节点用于彼此连接的身份验证参数。
 
 +----------+---------+-------------------------------------------------+
 | Name     | Type    | Description                                     |
 +==========+=========+=================================================+
-| nodeid   | integer | Node id from :ref:`pg_dist_node`, or 0, or -1   |
+| nodeid   | integer | 节点id, 来自 :ref:`pg_dist_node`, or 0, or -1   |
 +----------+---------+-------------------------------------------------+
-| rolename | name    | Postgres role                                   |
+| rolename | name    | Postgres 角色                                   |
 +----------+---------+-------------------------------------------------+
-| authinfo | text    | Space-separated libpq connection parameters     |
+| authinfo | text    | 以空格分隔的libpq连接参数                       |
 +----------+---------+-------------------------------------------------+
 
-Upon beginning a connection, a node consults the table to see whether a row with the destination ``nodeid`` and desired ``rolename`` exists. If so, the node includes the corresponding ``authinfo`` string in its libpq connection. A common example is to store a password, like ``'password=abc123'``, but you can review the `full list <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_ of possibilities.
+在开始连接时，节点查询该表以查看是否存在具有目的``nodeid``和期望``rolename``的行。
+如果是，则节点包含相应``authinfo``字符串在其libpq连接中。
+一个常见的例子是存储密码，比如``'password=abc123'``, 但是您可以查看可能用到的`完整列表 <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_。
 
-The parameters in ``authinfo`` are space-separated, in the form ``key=val``. To write an empty value, or a value containing spaces, surround it with single quotes, e.g., ``keyword='a value'``. Single quotes and backslashes within the value must be escaped with a backslash, i.e., ``\'`` and ``\\``.
+``authinfo``中的参数以空格分隔, key=val格式。要写入空值或包含空格的值，请用单引号括起来，例如``keyword='a value'``。值中的单引号和反斜杠必须用反斜杠转义, 例如``\'`` 和 ``\\``。
 
-The ``nodeid`` column can also take the special values 0 and -1, which mean *all nodes* or *loopback connections*, respectively. If, for a given node, both specific and all-node rules exist, the specific rule has precedence.
+该 ``nodeid`` 列还可以采用特殊值0和-1，分别表示*所有节点*或*环回连接*。如果, 对于给定节点，同时存在特定和所有节点规则，则特定规则具有优先权。
 
 ::
 
@@ -487,28 +490,28 @@ The ``nodeid`` column can also take the special values 0 and -1, which mean *all
         123 | jdoe     | password=abc123
     (1 row)
 
-Connection Pooling Credentials
+连接池凭据
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. 注意::
 
-  This table 是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
+  此表是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
 
-If you want to use a connection pooler to connect to a node, you can specify the pooler options using ``pg_dist_poolinfo``. This metadata table holds the host, port and database name for Citus to use when connecting to a node through a pooler.
+如果要使用连接池连接到一个节点，可以使用``pg_dist_poolinfo``时指定pooler选项。此元数据表包含Citus在通过连接池连接到一个节点时要使用的主机，端口和数据库名称。
 
-If pool information is present, Citus will try to use these values instead of setting up a direct connection. The pg_dist_poolinfo information in this case supersedes :ref:`pg_dist_node <pg_dist_node>`.
+如果存在池信息，Citus将尝试使用这些值而不是设置直接连接。pg_dist_poolinfo信息在这种情况下取代:ref:`pg_dist_node <pg_dist_node>`。
 
 +----------+---------+---------------------------------------------------+
 | Name     | Type    | Description                                       |
 +==========+=========+===================================================+
-| nodeid   | integer | Node id from :ref:`pg_dist_node`                  |
+| nodeid   | integer | 节点id, 来自 :ref:`pg_dist_node`                  |
 +----------+---------+---------------------------------------------------+
-| poolinfo | text    | Space-separated parameters: host, port, or dbname |
+| poolinfo | text    | 空格分隔的参数: host, port, 或 dbname             |
 +----------+---------+---------------------------------------------------+
 
 .. 注意::
 
-   In some situations Citus ignores the settings in pg_dist_poolinfo. For instance :ref:`Shard rebalancing <shard_rebalancing>` is not compatible with connection poolers such as pgbouncer. In these scenarios Citus will use a direct connection.
+   在某些情况下，Citus会忽略pg_dist_poolinfo中的设置。例如，:ref:`分片再平衡 <shard_rebalancing>`与诸如pgbouncer之类的连接池的连接不兼容。在这些情况下，Citus将使用直接连接。
 
 .. code-block:: sql
 
@@ -519,14 +522,14 @@ If pool information is present, Citus will try to use these values instead of se
 
 .. _worker_shards:
 
-Shards and Indices on MX Workers
+MX工作者上的分片和索引
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. 注意::
 
-   The citus_shards_on_worker and citus_shard_indexes_on_worker views are relevant in Citus MX only. In the non-MX scenario they contain no rows.
+   citus_shards_on_worker和citus_shard_indexes_on_worker视图仅与Citus MX相关。在非MX方案中，它们不包含任何行。
 
-Worker nodes store shards as tables that are ordinarily hidden in Citus MX (see :ref:`override_table_visibility`). The easiest way to obtain information about the shards on each worker is to consult that worker's ``citus_shards_on_worker`` view. For instance, here are some shards on a worker for the distributed table ``test_table``:
+工作节点将分片存储为通常隐藏在Citus MX中的表(请参阅:ref:`override_table_visibility`)。获取每个工作者上的分片信息的最简单方法是查询该工作者的``citus_shards_on_worker``视图。例如，以下是分布式表``test_table``在一个工作者上的一些分片：
 
 .. code-block:: postgres
 
@@ -536,7 +539,7 @@ Worker nodes store shards as tables that are ordinarily hidden in Citus MX (see 
     public | test_table_1130000 | table | citus
     public | test_table_1130002 | table | citus
 
-Indices for shards are also hidden, but discoverable through another view, ``citus_shard_indexes_on_worker``:
+分片的索引也是隐藏的，但可以通过另一个视图发现, ``citus_shard_indexes_on_worker`：
 
 .. code-block:: postgres
 
