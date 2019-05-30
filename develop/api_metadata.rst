@@ -133,9 +133,9 @@ pg_dist_placement表跟踪工作节点上的分片复制副本的位置。分配
      102010 |          1 |           0 |           6 |       4
      102011 |          1 |           0 |           7 |       4
 
-.. note::
+.. 注意::
 
-  As of Citus 7.0 the analogous table :code:`pg_dist_shard_placement` has been deprecated. It included the node name and port for each placement:
+  截至Citus 7.0，类似表:code:`pg_dist_shard_placement`已被弃用。它包括每个位置的节点名称和端口：
 
   ::
 
@@ -150,34 +150,31 @@ pg_dist_placement表跟踪工作节点上的分片复制副本的位置。分配
        102010 |          1 |           0 | localhost |    12345 |           6
        102011 |          1 |           0 | localhost |    12345 |           7
 
-  That information is now available by joining pg_dist_placement with :ref:`pg_dist_node <pg_dist_node>` on the groupid. For compatibility Citus still provides pg_dist_shard_placement as a view. However we recommend using the new, more normalized, tables when possible.
+  现在可以通过在groupid 上将pg_dist_placement与:ref:`pg_dist_node <pg_dist_node>`连接来获取该信息。为了兼容性，Citus仍然提供pg_dist_shard_placement作为视图。但是，我们建议尽可能使用新的，更规范化的表。
 
-
-Shard Placement States
+分片放置状态
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus manages shard health on a per-placement basis and automatically marks a placement as unavailable if leaving the placement in service would put the cluster in an inconsistent state. The shardstate column in the pg_dist_placement table is used to store the state of shard placements. A brief overview of different shard placement states and their representation is below.
+Citus根据一个per-placement管理分片的健康状况，如果将位置留在服务中会使集群处于不一致的状态，则自动将位置标记为不可用。pg_dist_placement表中的shardstate列用于存储分片展示位置的状态。下面是不同分片放置状态及其表示的简要概述。
 
 
 +----------------+----------------------+---------------------------------------------------------------------------+
 |  State name    |  Shardstate value    |       Description                                                         |
 +================+======================+===========================================================================+
-|   FINALIZED    |           1          | | This is the state new shards are created in. Shard placements           |
-|                |                      | | in this state are considered up-to-date and are used in query   	       |
-|                |                      | | planning and execution.                                                 |
-+----------------+----------------------+---------------------------------------------------------------------------+   
-|  INACTIVE      |            3         | | Shard placements in this state are considered inactive due to           |
-|                |                      | | being out-of-sync with other replicas of the same shard. This           |
-|                |                      | | can occur when an append, modification (INSERT, UPDATE or               |
-|                |                      | | DELETE ) or a DDL operation fails for this placement. The query         |
-|                |                      | | planner will ignore placements in this state during planning and        |
-|                |                      | | execution. Users can synchronize the data in these shards with          |
-|                |                      | | a finalized replica as a background activity.                           |
+|   FINALIZED    |           1          | | 这是创建状态的新分片。分片放置在这种状态下被认为是最新的                |
+|                |                      | | 并用于查询计划和执行。  	                                             |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|   TO_DELETE    |            4         | | If Citus attempts to drop a shard placement in response to a            |
-|                |                      | | master_apply_delete_command call and fails, the placement is            |
-|                |                      | | moved to this state. Users can then delete these shards as a            |
-|                |                      | | subsequent background activity.                                         |
+| INACTIVE       |            3         | | 处于此状态的分片展示位置被视为非活动状态,                               |
+|                |                      | | 理所当然的与同一分片的其他副本不同步。                                  |
+|                |                      | | 这种情况可能出现当此展示位置的追加，                                    |
+|                |                      | | 修改（INSERT，UPDATE或DELETE）或DDL操作失败时。                         |
+|                |                      | | 在规划和执行期间，查询规划器将忽略此状态的展示位置。                    |
+|                |                      | | 用户可以使用幕后活动将这些分片数据与完成的副本同步。                    |
++----------------+----------------------+---------------------------------------------------------------------------+
+|   TO_DELETE    |            4         | | 如果Citus为了响应一个master_apply_delete_command调用,                   |
+|                |                      | | 而尝试删除分片放置并失败，                                              |
+|                |                      | | 放置位置会调整到了这个状态。                                            |
+|                |                      | | 然后，用户可以在后续的后台活动中删除这些分片。                          |
 +----------------+----------------------+---------------------------------------------------------------------------+
 
 
