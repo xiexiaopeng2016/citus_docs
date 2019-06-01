@@ -1,12 +1,13 @@
 .. _configuration:
 
-Configuration Reference
+配置参考
 =======================
 
-There are various configuration parameters that affect the behaviour of Citus. These include both standard PostgreSQL parameters and Citus specific parameters. To learn more about PostgreSQL configuration parameters, you can visit the `run time configuration <http://www.postgresql.org/docs/current/static/runtime-config.html>`_ section of PostgreSQL documentation.
+有各种配置参数会影响Citus的行为。这些包括标准PostgreSQL参数和Citus特定参数。要了解更多有关PostgreSQL配置参数的信息，可以访问PostgreSQL文档的`运行时配置 <http://www.postgresql.org/docs/current/static/runtime-config.html>`_ 部分。
 
-The rest of this reference aims at discussing Citus specific configuration parameters. These parameters can be set similar to PostgreSQL parameters by modifying postgresql.conf or `by using the SET command <http://www.postgresql.org/docs/current/static/config-setting.html>`_.
+本参考的其余部分旨在讨论Citus特定的配置参数。这些参数可以使用类似PostgreSQL参数修改postgresql.conf的方式设置, 或`使用SET命令 <http://www.postgresql.org/docs/current/static/config-setting.html>`_.
 
+例如，您可以使用以下命令更新设置：
 As an example you can update a setting with:
 
 .. code-block:: postgresql
@@ -14,64 +15,57 @@ As an example you can update a setting with:
     ALTER DATABASE citus SET citus.multi_task_query_log_level = 'log';
 
 
-General configuration
+一般配置
 ---------------------------------------
 
 citus.max_worker_nodes_tracked (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus tracks worker nodes' locations and their membership in a shared hash table on the coordinator node. This configuration value limits the size of the hash table, and consequently the number of worker nodes that can be tracked. The default for this setting is 2048. This parameter can only be set at server start and is effective on the coordinator node.
+Citus在协调节点上的分片哈希表中跟踪工作节点的位置及其成员资格。此配置值限制哈希表的大小，因此可以跟踪工作节点的数量。此设置的默认值为2048。此参数只能在服务器启动时设置，并且在协调节点上有效。
 
 citus.use_secondary_nodes (enum)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the policy to use when choosing nodes for SELECT queries. If this
-is set to 'always', then the planner will query only nodes which are
-marked as 'secondary' noderole in :ref:`pg_dist_node <pg_dist_node>`.
+设置为SELECT查询选择节点时要使用的策略。
+如果将其设置为'always'，则规划器将仅查询在pg_dist_node中节点角色标记为'secondary'的节点。
 
-The supported values for this enum are:
+此枚举支持的值为:
 
-* **never:** (default) All reads happen on primary nodes.
+* **never:** (默认) 所有读取都发生在主节点上.
 
-* **always:** Reads run against secondary nodes instead, and insert/update statements are disabled.
+* **always:** 读取针对辅助节点运行，并禁用insert/update语句。
 
 citus.cluster_name (text)
 $$$$$$$$$$$$$$$$$$$$$$$$$
 
-Informs the coordinator node planner which cluster it coordinates. Once
-cluster_name is set, the planner will query worker nodes in that cluster alone.
+通知协调器节点规划器它协调哪个集群。
+一旦设置了cluster_name，规划器将仅查询该集群中的工作节点。
 
 .. _enable_version_checks:
 
 citus.enable_version_checks (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Upgrading Citus version requires a server restart (to pick up the new
-shared-library), as well as running an ALTER EXTENSION UPDATE command. The
-failure to execute both steps could potentially cause errors or crashes. Citus
-thus validates the version of the code and that of the extension match, and
-errors out if they don't.
+升级Citus版本需要重新启动服务器(以获取新的共享库)，以及运行ALTER EXTENSION UPDATE命令。执行这两个步骤失败可能会导致错误或崩溃。因此，Citus验证代码的版本和扩展的版本是否匹配，如果不匹配，就会出现错误。
 
-This value defaults to true, and is effective on the coordinator. In rare cases,
-complex upgrade processes may require setting this parameter to false, thus
-disabling the check.
+此值默认为true，对协调器有效。在极少数情况下，复杂的升级过程可能需要将此参数设置为false，从而禁用检查。
 
 citus.log_distributed_deadlock_detection (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Whether to log distributed deadlock detection related processing in the server log. It defaults to false.
+是否在服务器日志中记录分布式死锁检测相关处理。它默认为false。
 
 citus.distributed_deadlock_detection_factor (floating point)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the time to wait before checking for distributed deadlocks. In particular the time to wait will be this value multiplied by PostgreSQL's `deadlock_timeout <https://www.postgresql.org/docs/current/static/runtime-config-locks.html>`_ setting. The default value is ``2``. A value of ``-1`` disables distributed deadlock detection.
+设置在检查分布式死锁之前等待的时间。特别是等待的时间将是这个值乘以PostgreSQL的`deadlock_timeout <https://www.postgresql.org/docs/current/static/runtime-config-locks.html>`_ 设置。默认值为2``2``。值-1禁用分布式死锁检测。
 
 .. _node_conninfo:
 
 citus.node_conninfo (text)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The ``citus.node_conninfo`` GUC sets non-sensitive `libpq connection parameters <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_ used for all inter-node connections.
+``citus.node_conninfo`` GUC设置非敏感的`libpq连接参数 <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_ 用于所有的节点间的连接。
 
 .. code-block:: postgresql
 
@@ -82,7 +76,7 @@ The ``citus.node_conninfo`` GUC sets non-sensitive `libpq connection parameters 
   SET citus.node_conninfo =
     'sslrootcert=/path/to/citus.crt sslmode=verify-full';
 
-Citus honors only a whitelisted subset of the options, namely:
+Citus仅授予选项的白名单子集，即：
 
 * application_name
 * connect_timeout
@@ -94,21 +88,21 @@ Citus honors only a whitelisted subset of the options, namely:
 * krbsrvname†
 * sslcompression
 * sslcrl
-* sslmode  (defaults to "require" as of Citus 8.1)
+* sslmode  (自Citus 8.1起默认为"require")
 * sslrootcert
 
-*(† = subject to the runtime presence of optional PostgreSQL features)*
+*(† = 运行时受可选PostgreSQL功能限制)*
 
 .. _override_table_visibility:
 
 citus.override_table_visibility (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
+.. 注意::
 
-   This GUC has an effect on Citus MX only.
+   此GUC仅对Citus MX有影响。
 
-Shards are stored on the worker nodes as regular tables with an identifier appended to their names. Unlike regular Citus, by default Citus MX does not show shards in the list of tables, when for instance a user runs ``\d`` in psql. However the shards can be made visible in MX by updating the GUC:
+分片以常规表的形式存储在工作节点上，并在其名称后面附加标识符。与常规Citus不同，默认情况下，当用户在psql中运行``\d``时，Citus MX不会在表列表中显示分片。但是，通过更新GUC，可以在MX中显示分片：
 
 .. code-block:: psql
 
@@ -128,70 +122,70 @@ Shards are stored on the worker nodes as regular tables with an identifier appen
    | public   | test_table_102047  | table  | citus    |
    +----------+--------------------+--------+----------+
 
-Now the ``test_table`` shards (``test_table_<n>``) appear in the list.
+现在，分片``test_table``(``test_table_<n>``)出现在列表中。
 
-Another way to see the shards is by querying the :ref:`citus_shards_on_worker <worker_shards>` view.
+查看分片的另一种方法是查询:ref:`citus_shards_on_worker <worker_shards>`视图。
 
-Query Statistics
+查询统计
 ---------------------------
 
 citus.stat_statements_purge_interval (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
+.. 注意::
 
-   This GUC is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+   该GUC是Citus企业版的一部分。请`联系我们<https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-Sets the frequency at which the maintenance daemon removes records from :ref:`citus_stat_statements <citus_stat_statements>` that are unmatched in ``pg_stat_statements``. This configuration value sets the time interval between purges in seconds, with a default value of 10. A value of 0 disables the purges.
+设置清除频率, 其维护守护进程从:ref:`citus_stat_statements <citus_stat_statements>`中删除在``pg_stat_statements``中不匹配记录。
+此配置值设置清除之间的时间间隔以秒为单位，默认值为10.值为0将禁用清除。
 
 .. code-block:: psql
 
    SET citus.stat_statements_purge_interval TO 5;
 
-This parameter is effective on the coordinator and can be changed at runtime.
+此参数在协调器上有效，可以在运行时更改。
 
 citus.stat_statements_max (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
+.. 注意::
 
-   This GUC is a part of Citus Enterprise. Please `contact us <https://www.citusdata.com/about/contact_us>`_ to obtain this functionality.
+   该GUC是Citus企业版的一部分。请`联系我们<https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-The maximum number of rows to store in :ref:`citus_stat_statements <citus_stat_statements>`. Defaults to 50000, and may be changed to any value in the range 1000 - 10000000. Note that each row requires 140 bytes of storage, so setting stat_statements_max to its maximum value of 10M would consume 1.4GB of memory.
+要存储在:ref:`citus_stat_statements <citus_stat_statements>`中的最大行数。默认为50000，可以更改为1000 - 10000000范围内的任何值。
+请注意，每行需要140个字节的存储空间，因此将stat_statements_max设置为最大值10M将占用1.4GB内存。
 
-Changing this GUC will not take effect until PostgreSQL is restarted.
+在重新启动PostgreSQL之前，更改此GUC将不会生效。
 
-Data Loading
+数据加载
 ---------------------------
 
 citus.multi_shard_commit_protocol (enum)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the commit protocol to use when performing COPY on a hash distributed table. On each individual shard placement, the COPY is performed in a transaction block to ensure that no data is ingested if an error occurs during the COPY. However, there is a particular failure case in which the COPY succeeds on all placements, but a (hardware) failure occurs before all transactions commit. This parameter can be used to prevent data loss in that case by choosing between the following commit protocols: 
+设置提交协议，以便用于在散列分布式表上执行COPY。在每个单独的分片放置上，COPY在事务块中执行，以确保在COPY期间发生错误时不会摄入任何数据。但是，有一个特殊的失败案例，其中COPY在所有放置上成功，但在所有事务提交之前发生(硬件)故障。通过在以下提交协议之间进行选择，此参数可用于防止数据丢失：
 
-* **2pc:** (default) The transactions in which COPY is performed on the shard placements are first prepared using PostgreSQL's `two-phase commit <http://www.postgresql.org/docs/current/static/sql-prepare-transaction.html>`_ and then committed. Failed commits can be manually recovered or aborted using COMMIT PREPARED or ROLLBACK PREPARED, respectively. When using 2pc, `max_prepared_transactions <http://www.postgresql.org/docs/current/static/runtime-config-resource.html>`_ should be increased on all the workers, typically to the same value as max_connections.
+* **2pc:** (default) 在分片放置上执行复制的事务, 首先用PostgreSQL的 `两阶段提交 <http://www.postgresql.org/docs/current/static/sql-prepare-transaction.html>`_ 准备数据, 然后提交。失败的提交可以分别被手动恢复或使用COMMIT PREPARED 或 ROLLBACK PREPARED中止。可以分别使用COMMIT PREPARED或ROLLBACK PREPARED手动恢复或中止失败的提交。在使用2pc时，应在所有工作者上增加 `max_prepared_transactions <http://www.postgresql.org/docs/current/static/runtime-config-resource.html>`_ ，通常与max_connections的值相同。
 
-* **1pc:** The transactions in which COPY is performed on the shard placements is committed in a single round. Data may be lost if a commit fails after COPY succeeds on all placements (rare).
+* **1pc:** 在单轮中提交对分片放置执行COPY的事务。数据可能会丢失, 如果在所有位置COPY成功后提交失败(很少见)。
 
 .. _replication_factor:
 
 citus.shard_replication_factor (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the replication factor for shards i.e. the number of nodes on which shards will be placed and defaults to 1. This parameter can be set at run-time and is effective on the coordinator.
-The ideal value for this parameter depends on the size of the cluster and rate of node failure. For example, you may want to increase this replication factor if you run large clusters and observe node failures on a more frequent basis.
+设置分片的复制因子，也就是将要放置分片的节点数，默认为1。此参数可在运行时设置，对协调器有效。此参数的理想值取决于群集的大小和节点故障率。例如，你可能需要增加此复制因子, 假如您运行大型集群, 并频繁地观察到节点故障。
 
 citus.shard_count (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the shard count for hash-partitioned tables and defaults to 32. This value is used by
-the :ref:`create_distributed_table <create_distributed_table>` UDF when creating
-hash-partitioned tables. This parameter can be set at run-time and is effective on the coordinator. 
+设置散列分区表的分片数目，默认为32。
+在创建散列分区表时，:ref:`create_distributed_table <create_distributed_table>` UDF使用此值。此参数可以在运行时设置，并对协调者起作用。
 
 citus.shard_max_size (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the maximum size to which a shard will grow before it gets split and defaults to 1GB. When the source file's size (which is used for staging) for one shard exceeds this configuration value, the database ensures that a new shard gets created. This parameter can be set at run-time and is effective on the coordinator.
+设置分片在被分割之前将增长到的最大大小 ，默认为1GB。当一个分片的源文件大小（它将用于分段）超过此配置值时，数据库会确保创建新分片。此参数可以在运行时设置，并对协调者起作用。
 
 .. Comment out this configuration as currently COPY only support random
    placement policy.
@@ -204,54 +198,53 @@ Sets the maximum size to which a shard will grow before it gets split and defaul
 
    * **local-node-first:** The local node first policy places the first replica of the shard on the client node from which the \\copy command is being run. As the coordinator node does not store any data, the policy requires that the command be run from a worker node. As the first replica is always placed locally, it provides better shard placement guarantees.
 
-Planner Configuration
+规划器配置
 ------------------------------------------------
 
 citus.limit_clause_row_fetch_count (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the number of rows to fetch per task for limit clause optimization. In some cases, select queries with limit clauses may need to fetch all rows from each task to generate results. In those cases, and where an approximation would produce meaningful results, this configuration value sets the number of rows to fetch from each shard. Limit approximations are disabled by default and this parameter is set to -1. This value can be set at run-time and is effective on the coordinator.
+设置每个任务要获取的行数, 为limit子句优化。在有些情况下，具有limit子句的select查询可能需要从每个任务获取所有行以生成结果。在更适合使用近似值得情况下，此配置值设置从每个分片中获取的行数。Limit近似值默认情况下是禁用的，此参数设置为-1。此值可以在运行时设置，并且对协调器有效。
 
 citus.count_distinct_error_rate (floating point)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus can calculate count(distinct) approximates using the postgresql-hll extension. This configuration entry sets the desired error rate when calculating count(distinct). 0.0, which is the default, disables approximations for count(distinct); and 1.0 provides no guarantees about the accuracy of results. We recommend setting this parameter to 0.005 for best results. This value can be set at run-time and is effective on the coordinator.
+Citus可以使用postgresql-hll扩展计算count(distinct)近似值。此配置项在计算count(distinct)时设置所需的错误率。0.0，这是默认值，禁用count(distinct)的近似值; 1.0也不能保证结果的准确性。我们建议将此参数设置为0.005以获得最佳效果。此值可以在运行时设置，并且对协调器有效。
 
 citus.task_assignment_policy (enum)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. note::
+.. 注意::
 
-   This GUC is applicable only when :ref:`shard_replication_factor <replication_factor>` is greater than one, or for queries against :ref:`reference_tables`.
+   仅当:ref:`shard_replication_factor <replication_factor>`大于1时，或者针对:ref:`reference_tables`的查询，此GUC才适用。
 
-Sets the policy to use when assigning tasks to workers. The coordinator assigns tasks to workers based on shard locations. This configuration value specifies the policy to use when making these assignments. Currently, there are three possible task assignment policies which can be used.
+设置将任务分配给工作者时使用的策略。协调员根据分片位置为工作者分配任务。此配置值指定进行这些分配时要使用的策略。目前，有三种可能的任务分配策略可以使用。
 
-* **greedy:** The greedy policy is the default and aims to evenly distribute tasks across workers.
+* **greedy:** 贪婪的策略是默认的，用于在工作者之间平均分配任务。
 
-* **round-robin:** The round-robin policy assigns tasks to workers in a round-robin fashion alternating between different replicas. This enables much better cluster utilization when the shard count for a table is low compared to the number of workers.
+* **round-robin:** 循环策略以循环方式为工作者分配任务，在不同的副本之间交替。当表的分片数目低于工作者数目时，这可以实现更好的集群利用率。
 
-* **first-replica:** The first-replica policy assigns tasks on the basis of the insertion order of placements (replicas) for the shards. In other words, the fragment query for a shard is simply assigned to the worker which has the first replica of that shard. This method allows you to have strong guarantees about which shards will be used on which nodes (i.e. stronger memory residency guarantees).
+* **first-replica:** 第一个副本策略根据分片的放置(副本)的插入顺序分配任务。换句话说，分片的片段查询只是分配给具有该分片的第一个副本的工作者。这种方法允许您对哪些分片将在哪些节点上使用(即更强的内存驻留保证)有很强的保证。
 
-This parameter can be set at run-time and is effective on the coordinator.
+此参数可以在运行时设置，并且对协调器有效。
 
-Intermediate Data Transfer
+中间数据传输
 -------------------------------------------------------------------
 
 citus.binary_worker_copy_format (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Use the binary copy format to transfer intermediate data between workers. During large table joins, Citus may have to dynamically repartition and shuffle data between different workers. By default, this data is transferred in text format. Enabling this parameter instructs the database to use PostgreSQL’s binary serialization format to transfer this data. This parameter is effective on the workers and needs to be changed in the postgresql.conf file. After editing the config file, users can send a SIGHUP signal or restart the server for this change to take effect.
-
+使用二进制复制格式在工作者之间传输中间数据。在大型表连接期间，Citus可能必须在不同工作者之间动态地重新分配和清洗数据。默认情况下，此数据以文本格式传输。启用此参数指示数据库使用PostgreSQL的二进制序列化格式来传输此数据。此参数对工作者有效，需要在postgresql.conf文件中更改。编辑配置文件后，用户可以发送SIGHUP信号或重新启动服务器以使此更改生效。
 
 citus.binary_master_copy_format (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Use the binary copy format to transfer data between coordinator and the workers. When running distributed queries, the workers transfer their intermediate results to the coordinator for final aggregation. By default, this data is transferred in text format. Enabling this parameter instructs the database to use PostgreSQL’s binary serialization format to transfer this data. This parameter can be set at runtime and is effective on the coordinator.
+使用二进制复制格式在协调者和工作者之间传输数据。运行分布式查询时，工作者将其中间结果传输到协调者以进行最终聚合。默认情况下，此数据以文本格式传输。启用此参数指示数据库使用PostgreSQL的二进制序列化格式来传输此数据。此参数可以在运行时设置，并且对协调者有效。
 
 citus.max_intermediate_result_size (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The maximum size in KB of intermediate results for CTEs and complex subqueries. The default is 1GB, and a value of -1 means no limit. Queries exceeding the limit will be canceled and produce an error message.
+CTE和复杂子查询的中间结果的最大大小（KB）。默认值为1GB，值为-1表示没有限制。超出限制的查询将被取消并生成错误消息。
 
 DDL
 -------------------------------------------------------------------
@@ -261,74 +254,70 @@ DDL
 citus.enable_ddl_propagation (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Specifies whether to automatically propagate DDL changes from the coordinator to all workers. The default value is true. Because some schema changes require an access exclusive lock on tables and because the automatic propagation applies to all workers sequentially it can make a Citus cluster temporarily less responsive. You may choose to disable this setting and propagate changes manually.
+指定是否自动将DDL更改从协调者传播到所有工作者。默认值是true。由于某些架构更改需要对表进行访问独占锁定，并且因为自动传播按顺序应用于所有工作者，因此可能会使Citus群集暂时响应性降低。您可以选择禁用此设置并手动传播更改。
 
-.. note::
+.. 注意::
 
-  For a list of DDL propagation support, see :ref:`ddl_prop_support`.
+  有关DDL传播支持的列表，请参阅:ref:`ddl_prop_support`.
 
-Executor Configuration
+执行器配置
 ------------------------------------------------------------
 
 citus.all_modifications_commutative
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus enforces commutativity rules and acquires appropriate locks for modify operations in order to guarantee correctness of behavior. For example, it assumes that an INSERT statement commutes with another INSERT statement, but not with an UPDATE or DELETE statement. Similarly, it assumes that an UPDATE or DELETE statement does not commute with another UPDATE or DELETE statement. This means that UPDATEs and DELETEs require Citus to acquire stronger locks.
+Citus强制执行交换性规则，并为修改操作获取适当的锁，以确保行为的正确性。例如，它假定 INSERT 语句与另一个 INSERT 语句通信，但不与 UPDATE 或 DELETE 语句通信。同样，它假定 UPDATE 或 DELETE 语句不与另一个 UPDATE 或 DELETE 语句通信。这意味着 UPDATEs 和 DELETEs 要求Citus获得更强的锁。
 
-If you have UPDATE statements that are commutative with your INSERTs or other UPDATEs, then you can relax these commutativity assumptions by setting this parameter to true. When this parameter is set to true, all commands are considered commutative and claim a shared lock, which can improve overall throughput. This parameter can be set at runtime and is effective on the coordinator.
+如果您有UPDATE语句, 它与您的INSERTs或其他UPDATE交替，那么您可以通过将此参数设置为true来放宽这些交换假设。当此参数设置为true时，所有命令都被视为可交换，并声明共享锁，这可以提高整体吞吐量。此参数可以在运行时设置，并且对协调器有效。
 
 citus.max_task_string_size (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the maximum size (in bytes) of a worker task call string. Changing this value requires a server restart, it cannot be changed at runtime.
+设置工作者任务调用字符串的最大大小(以字节为单位)。更改此值需要重新启动服务器，不能在运行时更改。
 
-Active worker tasks are tracked in a shared hash table on the master node. This configuration value limits the maximum size of an individual worker task, and affects the size of pre-allocated shared memory.
+活动的工作者的任务在主节点上的共享哈希表中跟踪。此配置值限制单个工作者任务的最大大小，并影响预分配共享内存的大小。
 
-Minimum: 8192, Maximum 65536, Default 12288
+最小值: 8192, 最大值 65536, 默认值 12288
 
 
 citus.remote_task_check_interval (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets the frequency at which Citus checks for statuses of jobs managed by the task tracker executor. It defaults to 10ms. The coordinator assigns tasks to workers, and then regularly checks with them about each task's progress. This configuration value sets the time interval between two consequent checks. This parameter is effective on the coordinator and can be set at runtime.
+设置频率, Citus用任务跟踪执行器检查管理的作业的状态。默认为10毫秒。协调器将任务分配给工作者，然后定期检查每个任务的进度。此配置值设置两个后续检查之间的时间间隔。此参数在协调者上有效，可以在运行时设置。
 
 citus.task_executor_type (enum)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus has two executor types for running distributed SELECT queries. The desired executor can be selected by setting this configuration parameter. The accepted values for this parameter are:
+Citus有两种执行器类型，用于运行分布式SELECT查询。可以通过设置此配置参数来选择所需的执行器。此参数可接受的值为：
 
-* **real-time:** The real-time executor is the default executor and is optimal when you require fast responses to queries that involve aggregations and co-located joins spanning across multiple shards.
+* **real-time:** 实时执行器是默认执行器，当您需要快速响应涉及聚合和跨多个分片的共址连接的查询时，它是最佳的。
 
-* **task-tracker:** The task-tracker executor is well suited for long running, complex queries which require shuffling of data across worker nodes and efficient resource management.
+* **task-tracker:** 任务跟踪器执行器非常适合长时间运行的复杂查询，这些查询需要跨工作节点进行数据混洗和高效的资源管理。
 
-This parameter can be set at run-time and is effective on the coordinator. For more details about the executors, you can visit the :ref:`distributed_query_executor` section of our documentation.
+此参数可以在运行时设置，并且对协调者有效。有关执行程序的更多详细信息，可以访问我们文档的:ref:`distributed_query_executor`部分。
 
 .. _multi_task_logging:
 
 citus.multi_task_query_log_level (enum)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Sets a log-level for any query which generates more than one task (i.e. which
-hits more than one shard). This is useful during a multi-tenant application
-migration, as you can choose to error or warn for such queries, to find them and
-add a tenant_id filter to them. This parameter can be set at runtime and is
-effective on the coordinator. The default value for this parameter is 'off'.
+为任何生成多个任务的查询设置日志级别(即，这个查询会击中多个分片)。这在多租户应用程序迁移期间非常有用，因为您可以选择此类查询的错误或警告，以查找它们并向其添加tenant_id过滤器。此参数可以在运行时设置，并且对协调器有效。此参数的默认值为“off”。
 
-The supported values for this enum are:
+此枚举支持的值为：
 
-* **off:** Turn off logging any queries which generate multiple tasks (i.e. span multiple shards)
+* **off:** 关闭任何生成多个任务的查询(即跨多个切分)的日志
 
-* **debug:** Logs statement at DEBUG severity level.
+* **debug:** 记录严重性级别是DEBUG的语句。
 
-* **log:** Logs statement at LOG severity level. The log line will include the SQL query that was run.
+* **log:** 记录严重性级别是LOG的语句。日志行将包括运行的SQL查询。
 
-* **notice:** Logs statement at NOTICE severity level.
+* **notice:** 记录严重性级别是NOTICE的语句。
 
-* **warning:** Logs statement at WARNING severity level.
+* **warning:** 记录严重性级别是WARNING的语句。
 
-* **error:** Logs statement at ERROR severity level.
+* **error:** 记录严重性级别是ERROR的语句。
 
-Note that it may be useful to use :code:`error` during development testing, and a lower log-level like :code:`log` during actual production deployment. Choosing ``log`` will cause multi-task queries to appear in the database logs with the query itself shown after "STATEMENT."
+请注意，:code:`error`在开发测试期间使用它可能很有用，级别较低的日志比如:code:`log`在实际生产部署期间使用。选择``log``将导致多任务查询出现在数据库日志中，查询显示在"STATEMENT."之后。
 
 .. code-block:: text
 
@@ -336,70 +325,69 @@ Note that it may be useful to use :code:`error` during development testing, and 
   HINT:  Queries are split to multiple tasks if they have to be split into several queries on the workers.
   STATEMENT:  select * from foo;
 
-Real-time executor configuration
+实时执行器配置
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The Citus query planner first prunes away the shards unrelated to a query and then hands the plan over to the real-time executor. For executing the plan, the real-time executor opens one connection and uses two file descriptors per unpruned shard. If the query hits a high number of shards, then the executor may need to open more connections than max_connections or use more file descriptors than max_files_per_process.
+Citus查询规划器首先剪掉与查询无关的分片，然后将计划交给实时执行器。为了执行计划，实时执行器打开一个连接，并为每个未删去的的分片使用两个文件描述符。如果查询命中大量分片，则执行器可能需要打开比 max_connections 更多的连接，或者使用比 max_files_per_process 更多的文件描述符。
 
-In such cases, the real-time executor will begin throttling tasks to prevent overwhelming the worker resources. Since this throttling can reduce query performance, the real-time executor will issue an appropriate warning suggesting that increasing these parameters might be required to maintain the desired performance. These parameters are discussed in brief below.
+在这种情况下，实时执行器将开始限制任务以防止压跨工作者资源。由于此限制可能会降低查询性能，因此实时执行器将发出适当的警告，建议可能需要增加这些参数才能保持所需的性能。下面简要讨论这些参数。
 
 max_connections (integer)
 ************************************************
 
-Sets the maximum number of concurrent connections to the database server. The default is typically 100 connections, but might be less if your kernel settings will not support it (as determined during initdb). The real time executor maintains an open connection for each shard to which it sends queries. Increasing this configuration parameter will allow the executor to have more concurrent connections and hence handle more shards in parallel. This parameter has to be changed on the workers as well as the coordinator, and can be done only during server start.
+设置与数据库服务器的最大并发连接数。默认值通常为100个连接，但如果您的内核设置将不支持它，则可能会更少(在initdb期间确定)。实时执行器为其发送查询的每个分片维护一个打开的连接。增加此配置参数将允许执行器具有更多并发连接，从而并行处理更多分片。这个参数必须在工作者和协调器上进行更改，并且只能在服务器启动期间进行。
 
 max_files_per_process (integer)
 *******************************************************
 
-Sets the maximum number of simultaneously open files for each server process and defaults to 1000. The real-time executor requires two file descriptors for each shard it sends queries to. Increasing this configuration parameter will allow the executor to have more open file descriptors, and hence handle more shards in parallel. This change has to be made on the workers as well as the coordinator, and can be done only during server start.
+设置每个服务器进程同时打开文件的最大数目，默认为1000。实时执行器需要为它发送查询的每个分片提供两个文件描述符。增加此配置参数将允许执行器具有更多打开的文件描述符，从而并行处理更多分片。必须在工作者和协调者上进行此更改，并且只能在服务器启动期间完成。
 
-.. note::
-  Along with max_files_per_process, one may also have to increase the kernel limit for open file descriptors per process using the ulimit command.
+.. 注意::
+  除了max_files_per_process之外，还可能需要使用 ulimit 命令增加每个进程的打开文件描述符的内核限制。
 
 citus.enable_repartition_joins (boolean)
 ****************************************
 
-Ordinarily, attempting to perform :ref:`repartition_joins` with the real-time executor will fail with an error message. However setting ``citus.enable_repartition_joins`` to true allows Citus to temporarily switch into the task-tracker executor to perform the join. The default value is false.
+通常，尝试用实时执行器执行:ref:`repartition_joins`将失败并显示错误消息。但是，设置``citus.enable_repartition_joins``为true, 允许Citus临时切换到任务跟踪器执行器以执行连接。默认值为false。
 
-Task tracker executor configuration
+任务跟踪器执行器配置
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 citus.task_tracker_delay (integer)
 **************************************************
 
-This sets the task tracker sleep time between task management rounds and defaults to 200ms. The task tracker process wakes up regularly, walks over all tasks assigned to it, and schedules and executes these tasks. Then, the task tracker sleeps for a time period before walking over these tasks again. This configuration value determines the length of that sleeping period. This parameter is effective on the workers and needs to be changed in the postgresql.conf file. After editing the config file, users can send a SIGHUP signal or restart the server for the change to take effect.
+设置任务跟踪器在任务管理循环之间的休眠时间，默认为200毫秒。任务跟踪器进程定期唤醒，遍历分配给它的所有任务，并安排和执行这些任务。然后，任务跟踪器在再次遍历这些任务之前休眠一段时间。此配置值确定睡眠时段的长度。此参数对工作者有效，需要在postgresql.conf文件中更改。编辑配置文件后，用户可以发送SIGHUP信号或重启服务器以使更改生效。
 
-This parameter can be decreased to trim the delay caused due to the task tracker executor by reducing the time gap between the management rounds. This is useful in cases when the shard queries are very short and hence update their status very regularly. 
+此参数可以减少, 可降低由任务跟踪执行器引起的延迟, 通过减少管理循环之间的时间间隔。这在分片查询非常短并因此非常定期更新其状态的情况下非常有用。
 
 citus.max_tracked_tasks_per_node (integer)
 ****************************************************************
 
-Sets the maximum number of tracked tasks per node and defaults to 1024. This configuration value limits the size of the hash table which is used for tracking assigned tasks, and therefore the maximum number of tasks that can be tracked at any given time. This value can be set only at server start time and is effective on the workers.
+设置每个节点的最大跟踪任务数，默认为1024。这个配置值限制了用于跟踪分配任务的哈希表的大小，由此限制了在任何给定时间可以跟踪的任务的最大数量。这个值只能在服务器启动时设置，并且对工作者有效。
 
-This parameter would need to be increased if you want each worker node to be able to track more tasks. If this value is lower than what is required, Citus errors out on the worker node saying it is out of shared memory and also gives a hint indicating that increasing this parameter may help.
+如果希望每个工作节点能够跟踪更多任务，则需要增加此参数。如果此值低于所需值，则Citus会在工作节点上输出错误消息，说明它超出了共享内存，并且还提供了一个提示，指示增加此参数可能有所帮助。
 
 citus.max_assign_task_batch_size (integer)
 *******************************************
 
-The task tracker executor on the coordinator synchronously assigns tasks in batches to the deamon on the workers. This parameter sets the maximum number of tasks to assign in a single batch. Choosing a larger batch size allows for faster task assignment. However, if the number of workers is large, then it may take longer for all workers to get tasks. This parameter can be set at runtime and is effective on the coordinator.
+协调者上的任务跟踪器执行器同步地将任务分批分配给工作者的守护程序。这个参数设置单个批次中要分配的最大任务数。选择更大的批量大小可以更快地分配任务。但是，如果工作者数量很多，那么所有工作者可能需要更长的时间来完成任务。此参数可以在运行时设置，并且对协调者有效。
 
 citus.max_running_tasks_per_node (integer)
 ****************************************************************
 
-The task tracker process schedules and executes the tasks assigned to it as appropriate. This configuration value sets the maximum number of tasks to execute concurrently on one node at any given time and defaults to 8. This parameter is effective on the worker nodes and needs to be changed in the postgresql.conf file. After editing the config file, users can send a SIGHUP signal or restart the server for the change to take effect.
+任务跟踪器进程会恰当的调度和执行分配给它的任务。这个配置值设置一个节点上在任何给定时间并发执行的最大任务数，默认为8。此参数在工作节点上有效，需要在postgresql.conf文件中更改。编辑配置文件后，用户可以发送SIGHUP信号或重启服务器以使更改生效。
 
-This configuration entry ensures that you don't have many tasks hitting disk at the same time and helps in avoiding disk I/O contention. If your queries are served from memory or SSDs, you can increase max_running_tasks_per_node without much concern.
+此配置条目可确保您没有多个任务同时访问磁盘，并有助于避免磁盘I/O争用。如果您的查询是从内存或SSD提供的，则可以不必担心增加max_running_tasks_per_node。
 
 citus.partition_buffer_size (integer)
 ************************************************
 
-Sets the buffer size to use for partition operations and defaults to 8MB. Citus allows for table data to be re-partitioned into multiple files when two large tables are being joined. After this partition buffer fills up, the repartitioned data is flushed into files on disk. This configuration entry can be set at run-time and is effective on the workers.
+设置用于分区操作的缓冲区大小，默认为8MB。Citus允许在连接两个大表时将表数据重新分区为多个文件。在此分区缓冲区填满后，重新分区的数据将刷新到磁盘上的文件中。此配置项可以在运行时设置，对工作者有效。
 
-
-Explain output
+解释输出
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 citus.explain_all_tasks (boolean)
 ************************************************
 
-By default, Citus shows the output of a single, arbitrary task when running `EXPLAIN <http://www.postgresql.org/docs/current/static/sql-explain.html>`_ on a distributed query. In most cases, the explain output will be similar across tasks. Occasionally, some of the tasks will be planned differently or have much higher execution times. In those cases, it can be useful to enable this parameter, after which the EXPLAIN output will include all tasks. This may cause the EXPLAIN to take longer.
+默认情况下，Citus 在分布式查询上运行 `EXPLAIN <http://www.postgresql.org/docs/current/static/sql-explain.html>`_ 时显示单个任意任务的输出。在大多数情况下，解释输出在不同任务之间是相似的。有时候，一些任务的计划会有所不同，或者执行时间会更长。在这些情况下，启用此参数可能很有用，之后EXPLAIN输出将包含所有任务。这可能会导致EXPLAIN花费更长时间。
