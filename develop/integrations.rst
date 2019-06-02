@@ -1,12 +1,12 @@
-External Integrations
+外部集成
 #####################
 
-Ingesting Data from Kafka
+从Kafka摄入数据
 =========================
 
-Citus can leverage existing Postgres data ingestion tools. For instance, we can use a tool called `kafka-sink-pg-json <https://github.com/justonedb/kafka-sink-pg-json>`_ to copy JSON messages from a Kafka topic into a database table. As a demonstration, we'll create a ``kafka_test`` table and ingest data from the ``test`` topic with a custom mapping of JSON keys to table columns.
+例如，我们可以使用名为 `kafka-sink-pg-json <https://github.com/justonedb/kafka-sink-pg-json>`_ 的工具将JSON消息从Kafka主题复制到数据库表中。作为演示，我们将创建一个``kafka_test``表并从``test``主题中提取数据，并将JSON键自定义映射到表列。
 
-The easiest way to experiment with Kafka is using the `Confluent platform <https://www.confluent.io/product/confluent-platform/>`_, which includes Kafka, Zookeeper, and associated tools whose versions are verified to work together.
+使用Kafka进行实验的最简单方法是使用 `Confluent平台 <https://www.confluent.io/product/confluent-platform/>`_，其中包括Kafka，Zookeeper和相关工具，这些工具的版本经过验证可以协同工作。
 
 .. code-block:: bash
 
@@ -19,7 +19,8 @@ The easiest way to experiment with Kafka is using the `Confluent platform <https
   curl -L https://github.com/justonedb/kafka-sink-pg-json/releases/download/v1.0.2/justone-jafka-sink-pg-json-1.0.zip -o sink.zip
   unzip -d sink $_ && rm $_
 
-The download of kafka-sink-pg-json contains some configuration files. We want to connect to the coordinator Citus node, so we must edit the configuration file ``sink/justone-kafka-sink-pg-json-connector.properties``:
+下载的kafka-sink-pg-json包含一些配置文件。
+我们想要连接到协调者Citus节点，因此我们必须编辑配置文件``sink/justone-kafka-sink-pg-json-connector.properties``：
 
 .. code-block:: sh
 
@@ -43,11 +44,11 @@ The download of kafka-sink-pg-json contains some configuration files. We want to
   db.json.parse=/@a,/@b
   db.columns=a,b
 
-Notice ``db.columns`` and ``db.json.parse``. The elements of these lists match up, with the items in ``db.json.parse`` specifying where to find values inside incoming JSON objects.
+通知``db.columns``和``db.json.parse``。这些列表的元素匹配，``db.json.parse``指定在传入的JSON对象中查找值的位置。
 
-.. note::
+.. 注意::
 
-  The paths in ``db.json.parse`` are written in a language that allows some flexibility in getting values out of JSON. Given the following JSON,
+  ``db.json.parse``路径以一种允许从JSON中灵活地获取值的语言编写。鉴于以下JSON，
 
   .. code-block:: json
 
@@ -60,16 +61,16 @@ Notice ``db.columns`` and ``db.json.parse``. The elements of these lists match u
       "acceleration":[0.01,0.0,0.0]
     }
 
-  here are some example paths and what they match:
+  这里有一些示例路径以及它们匹配的内容：
 
-  * ``/@identity`` - the path to element 71293145.
-  * ``/@location/@longitude`` - the path to element -2.4773414.
-  * ``/@acceleration/#0`` - the path to element 0.01
-  * ``/@location`` - the path to element ``{"latitude":51.5009449, "longitude":-2.4773414}``
+  * ``/@identity`` - 元素71293145的路径。
+  * ``/@location/@longitude`` - 元素-2.4773414的路径。
+  * ``/@acceleration/#0`` - 元素0.01的路径
+  * ``/@location`` - 元素``{"latitude":51.5009449, "longitude":-2.4773414}``的路径
 
-Our own scenario is simple. Our events will be objects like ``{"a":1, "b":2}``. The parser will pull those values into eponymous columns.
+我们自己的情况很简单。我们的事件将是像``{"a":1, "b":2}``。解析器将这些值拉入同名列。
 
-Now that the configuration file is set up, it's time to prepare the database. Connect to the coordinator node with psql and run this:
+设置好配置文件之后，就可以准备数据库了。使用psql连接到协调器节点并运行：
 
 .. code-block:: psql
 
@@ -80,7 +81,7 @@ Now that the configuration file is set up, it's time to prepare the database. Co
   create table kafka_test ( a int, b int );
   select create_distributed_table('kafka_test', 'a');
 
-Start the Kafka machinery:
+启动Kafka机器：
 
 .. code-block:: bash
 
@@ -100,7 +101,7 @@ Start the Kafka machinery:
                       --replication-factor 1 --partitions 1 \
                       --topic test
 
-Run the ingestion program:
+运行摄取程序：
 
 .. code-block:: bash
 
@@ -112,14 +113,14 @@ Run the ingestion program:
     sink/justone-kafka-sink-pg-json-standalone.properties \
     sink/justone-kafka-sink-pg-json-connector.properties
 
-At this point Kafka-Connect is watching the ``test`` topic, and will parse events there and insert them into ``kafka_test``. Let's send an event from the command line.
+此时Kafka-Connect正在监视test主题，并将在那里解析事件并将其插入``kafka_test``。让我们从命令行发送一个事件。
 
 .. code-block:: bash
 
   echo '{"a":42,"b":12}' | \
     $C/bin/kafka-console-producer --broker-list localhost:9092 --topic test
 
-After a small delay the new row will show up in the database.
+在一小段延迟之后，新行将显示在数据库中。
 
 ::
 
@@ -131,19 +132,19 @@ After a small delay the new row will show up in the database.
   │ 42 │ 12 │
   └────┴────┘
 
-Caveats
+警告
 -------
 
-* At the time of this writing, kafka-sink-pg-json requires Kafka version 0.9 or earlier.
-* The kafka-sink-pg-json connector config file does not provide a way to connect with SSL support, so this tool will not work with Citus Cloud which requires secure connections.
-* A malformed JSON string in the Kafka topic will cause the tool to become stuck. Manual intervention in the topic is required to process more events.
+* 在撰写本文时，kafka-sink-pg-json需要Kafka 0.9或更早版本。
+* kafka-sink-pg-json连接器配置文件不提供连接SSL支持的方法，因此该工具不适用于需要安全连接的Citus Cloud。
+* Kafka主题中格式不正确的JSON字符串将导致工具卡住。需要手动干预主题以处理更多事件。
 
-Ingesting Data from Spark
+从Spark中提取数据
 =========================
 
-People sometimes use Spark to transform Kafka data, such as by adding computed values. In this section we'll see how to ingest Spark dataframes into a distributed Citus table.
+人们有时使用Spark来转换Kafka数据，比如通过添加计算值。在本节中，我们将了解如何将Spark数据帧摄取到分布式Citus表中。
 
-First let's start a local Spark cluster. It has several moving parts, so the easiest way is to run the pieces with docker-compose.
+首先让我们启动一个本地Spark集群。它有几个移动部件，所以最简单的方法是使用docker-compose运行这些部件。
 
 .. code-block:: bash
 
@@ -152,15 +153,15 @@ First let's start a local Spark cluster. It has several moving parts, so the eas
   # this may require "sudo" depending on the docker daemon configuration
   docker-compose up
 
-To do the ingestion into PostgreSQL, we'll be writing custom Scala code. We'll use the Scala Build Tool (SBT) to load dependencies and run our code, so `download SBT <https://www.scala-sbt.org/download.html>`_ and install it on your machine.
+要摄取到PostgreSQL，我们将编写自定义Scala代码。我们将使用Scala构建工具（SBT）加载依赖项并运行我们的代码，因此请下载SBT并将其安装在您的计算机上。
 
-Next create a new directory for our project.
+接下来为我们的项目创建一个新目录。
 
 .. code-block:: bash
 
   mkdir sparkcitus
 
-Create a file called ``sparkcitus/build.sbt`` to tell SBT our project configuration, and add this:
+创建一个名为``sparkcitus/build.sbt``告诉SBT我们的项目配置的文件，并添加：
 
 .. code-block:: scala
 
@@ -181,7 +182,7 @@ Create a file called ``sparkcitus/build.sbt`` to tell SBT our project configurat
     "org.postgresql"   %  "postgresql" % "42.2.2"
   )
 
-Next create a helper Scala class for doing ingestion through JDBC. Add the following to ``sparkcitus/copy.scala``:
+接下来创建一个帮助器Scala类，用于通过JDBC进行提取。将以下内容添加到``sparkcitus/copy.scala``：
 
 .. code-block:: scala
 
@@ -236,7 +237,7 @@ Next create a helper Scala class for doing ingestion through JDBC. Add the follo
     }
   }
 
-Continuing the setup, save some sample data into ``people.json``. Note the intentional lack of surrounding square brackets. Later we'll create a Spark dataframe from the data.
+继续设置，将一些样本数据保存到``people.json``。注意故意缺少周围的方括号。稍后我们将从数据中创建Spark数据帧。
 
 .. code-block:: js
 
@@ -261,14 +262,14 @@ Continuing the setup, save some sample data into ``people.json``. Note the inten
   {"name":"Reita Bey"       , "age": 69},
   {"name":"Keely Symes"     , "age": 34}
 
-Finally, create and distribute a table in Citus:
+最后，在Citus中创建和分布一个表
 
 .. code-block:: sql
 
   create table spark_test ( name text, age integer );
   select create_distributed_table('spark_test', 'name');
 
-Now we're ready to hook everything together. Start up ``sbt``:
+现在我们已经准备好将所有东西挂钩了。启动sbt：
 
 .. code-block:: bash
 
@@ -276,7 +277,7 @@ Now we're ready to hook everything together. Start up ``sbt``:
 
   sbt
 
-Once inside sbt, compile the project and then go into the "console" which is a Scala repl that loads our code and dependencies:
+进入sbt后，编译项目，然后进入“控制台”，这是一个加载我们的代码和依赖项的Scala repl：
 
 .. code-block:: text
 
@@ -288,7 +289,7 @@ Once inside sbt, compile the project and then go into the "console" which is a S
 
   scala> 
 
-Type these Scala commands into the console:
+在控制台中键入以下Scala命令：
 
 .. code-block:: scala
 
@@ -311,9 +312,9 @@ Type these Scala commands into the console:
   // ingest the data frame using our CopyHelper class
   CopyHelper.copyIn(url, df, "spark_test")
 
-This uses the CopyHelper to ingest the ionformation. At this point the data will appear in the distributed table.
+这使用CopyHelper来摄取信息。此时，数据将出现在分布式表中。
 
-.. note::
+.. 注意::
 
   Our method of ingesting the dataframe is straightforward but doesn't protect against Spark errors. Spark guarantees "at least once" semantics, i.e. a read error can cause a subsequent read to encounter previously seen data.
 
