@@ -1,70 +1,40 @@
 .. _append_distribution:
 
-Append Distribution
+追加分步
 ===================
 
-.. note::
+.. 注意::
 
-  Append distribution is a specialized technique which requires
-  care to use efficiently. Hash distribution is a better choice
-  for most situations.
+  追加分配是一种需要谨慎使用的专业技术。对于大多数情况，散列分布是更好的选择。
 
-While Citus' most common use cases involve hash data distribution,
-it can also distribute timeseries data across a variable number of
-shards by their order in time. This section provides a short reference
-to loading, deleting, and manipulating timeseries data.
+虽然Citus最常见的用例涉及散列数据分发，但它也可以按时间顺序在可变数量的分片中分配时间序列数据。本节提供了加载，删除和操作时间序列数据的简短参考。
 
-As the name suggests, append based distribution is more suited to
-append-only use cases. This typically includes event based data
-which arrives in a time-ordered series. You can then distribute
-your largest tables by time, and batch load your events into Citus
-in intervals of N minutes. This data model can be generalized to a
-number of time series use cases; for example, each line in a website's
-log file, machine activity logs or aggregated website events. Append
-based distribution supports more efficient range queries. This is
-because given a range query on the distribution key, the Citus query
-planner can easily determine which shards overlap that range and
-send the query only to relevant shards.
+顾名思义，基于追加的分布更适合append-only用例。这通常包括基于事件的数据，它以按时间排顺的系列到达。然后，您可以按时间分布最大的表，并以N分钟为间隔将事件批量加载到Citus中。该数据模型可以推广到许多时间序列用例; 例如，网站日志文件中的每一行，机器活动日志或聚合的网站事件。基于附加的分布支持更有效的范围查询。这是因为给定分布键上的范围查询，Citus查询计划器可以轻松确定哪些分片与该范围重叠，并仅将查询发送到相关分片。
 
-Hash based distribution is more suited to cases where you want to
-do real-time inserts along with analytics on your data or want to
-distribute by a non-ordered column (eg. user id). This data model
-is relevant for real-time analytics use cases; for example, actions
-in a mobile application, user website events, or social media
-analytics. In this case, Citus will maintain minimum and maximum
-hash ranges for all the created shards. Whenever a row is inserted,
-updated or deleted, Citus will redirect the query to the correct
-shard and issue it locally. This data model is more suited for doing
-co-located joins and for queries involving equality based filters
-on the distribution column.
+基于散列的分布更适合于您想要执行实时插入以及对数据进行分析的情况，或者您想要通过非有序的列进行分布的情况(例如, 用户id)。此数据模型与实时分析用例相关; 例如，移动应用程序中的操作，用户网站事件或社交媒体分析。在这种情况下，Citus将为所有创建的分片维护最小和最大散列范围。每当一行被插入，更新或删除时，Citus都会将查询重定向到正确的分片并在本地发出。此数据模型更适合于执行共址连接以及涉及分布列上基于相等过滤器的查询。
 
-Citus uses slightly different syntaxes for creation and manipulation
-of append and hash distributed tables. Also, the operations supported
-on the tables differ based on the distribution method chosen. In the
-sections that follow, we describe the syntax for creating append
-distributed tables, and also describe the operations which can be
-done on them.
+Citus使用稍微不同的语法来创建和操作append和hash分布表。此外，表中支持的操作因所选的分布方法而异。在接下来的部分中，我们将介绍创建追加分布式表的语法，并描述可以对它们执行的操作。
 
-Creating and Distributing Tables
+创建和分布表
 ---------------------------------
 
-.. note::
+.. 注意::
 
-  The instructions below assume that the PostgreSQL installation is in your path. If not, you will need to add it to your PATH environment variable. For example:
+  下面的说明假定PostgreSQL安装已经在您的path中。如果没有，则需要将其添加到PATH环境变量中。例如：
 
   .. code-block:: bash
 
       export PATH=/usr/lib/postgresql/9.6/:$PATH
 
 
-We use the github events dataset to illustrate the commands below. You can download that dataset by running:
+我们使用github事件数据集来说明下面的命令。您可以通过运行以下命令下载该数据集：
 
 .. code-block:: bash
 
     wget http://examples.citusdata.com/github_archive/github_events-2015-01-01-{0..5}.csv.gz
     gzip -d github_events-2015-01-01-*.gz
 
-To create an append distributed table, you need to first define the table schema. To do so, you can define a table using the `CREATE TABLE <http://www.postgresql.org/docs/current/static/sql-createtable.html>`_ statement in the same way as you would do with a regular PostgreSQL table.
+要创建追加分布式表，您需要首先定义表架构。为此，您可以使用 `CREATE TABLE <http://www.postgresql.org/docs/current/static/sql-createtable.html>`_ 语句定义表, 与定义常规PostgreSQL表的方式相同。
 
 .. code-block:: postgresql
 
@@ -83,22 +53,29 @@ To create an append distributed table, you need to first define the table schema
     	created_at timestamp
     );
 
-Next, you can use the create_distributed_table() function to mark the table as an append distributed table and specify its distribution column.
+接下来，您可以使用create_distributed_table()函数将表标记为追加分布式表, 并指定其分布列。
 
 .. code-block:: postgresql
 
     SELECT create_distributed_table('github_events', 'created_at', 'append');
 
-This function informs Citus that the github_events table should be distributed by append on the created_at column. Note that this method doesn't enforce a particular distribution; it merely tells the database to keep minimum and maximum values for the created_at column in each shard which are later used by the database for optimizing queries.
+此函数通知Citus应该在created_at列上来分发github_events表。
+这个函数通知Citus, github_events表应该在created_at列上用append方式分布。
+注意，此方法不强制执行特定的分布;
+它只告诉数据库在每个分片中保留created_at列的最小值和最大值，稍后数据库将使用这些分片来优化查询。
+请注意，此方法不强制执行特定分发; 它只是告诉数据库在每个分片中保留created_at列的最小值和最大值，稍后, 数据库用这些值来优化查询。
 
-Expiring Data
+到期数据
 ---------------
 
-In append distribution, users typically want to track data only for the last few months / years. In such cases, the shards that are no longer needed still occupy disk space. To address this, Citus provides a user defined function master_apply_delete_command() to delete old shards. The function takes a `DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_ command as input and deletes all the shards that match the delete criteria with their metadata.
+在追加分布中，用户通常只想跟踪过去几个月/年的数据。
+在这种情况下，不再需要的分片仍然占用磁盘空间。
+为了解决这个问题，Citus提供了一个用户定义的函数master_apply_delete_command()来删除旧的分片。
+该函数将`DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_命令作为输入，并删除与删除条件匹配的所有分片及其元数据。
 
-The function uses shard metadata to decide whether or not a shard needs to be deleted, so it requires the WHERE clause in the DELETE statement to be on the distribution column. If no condition is specified, then all shards are selected for deletion. The UDF then connects to the worker nodes and issues DROP commands for all the shards which need to be deleted. If a drop query for a particular shard replica fails, then that replica is marked as TO DELETE. The shard replicas which are marked as TO DELETE are not considered for future queries and can be cleaned up later.
+该函数使用分片元数据来决定是否需要删除分片，因此它要求DELETE语句中的WHERE子句位于分发列上。如果未指定条件，则选择所有分片进行删除。然后，UDF连接到工作节点，并为需要删除的所有分片发出DROP命令。如果特定分片副本的删除查询失败，则该副本将标记为TO DELETE。标记为TO DELETE的分片副本不会被考虑用于将来的查询，可以在以后清除。
 
-The example below deletes those shards from the github_events table which have all rows with created_at >= '2015-01-01 00:00:00'. Note that the table is distributed on the created_at column.
+下面的示例从github_events表中删除那些包含created_at> ='2015-01-01 00:00:00'的所有行的分片。请注意，该表分布在created_at列上。
 
 .. code-block:: postgresql
 
@@ -108,80 +85,77 @@ The example below deletes those shards from the github_events table which have a
                                3
     (1 row)
 
-To learn more about the function, its arguments and its usage, please visit the :ref:`user_defined_functions` section of our documentation.  Please note that this function only deletes complete shards and not individual rows from shards. If your use case requires deletion of individual rows in real-time, see the section below about deleting data.
+要了解该函数，其参数及其用法的更多信息，请访问我们文档中的:ref:`user_defined_functions`部分。请注意，此功能仅删除分片中的完整分片而不删除单个行。如果您的用例需要实时删除单个行，请参阅以下有关删除数据的部分。
 
-Deleting Data
+删除数据
 ---------------
 
-The most flexible way to modify or delete rows throughout a Citus cluster with regular SQL statements:
+在Citus集群中修改或删除行的最灵活方法是使用常规SQL语句：
 
 .. code-block:: postgresql
 
   DELETE FROM github_events
   WHERE created_at >= '2015-01-01 00:03:00';
 
-Unlike master_apply_delete_command, standard SQL works at the row- rather than shard-level to modify or delete all rows that match the condition in the where clause. It deletes rows regardless of whether they comprise an entire shard.
+与master_apply_delete_command不同，标准SQL在行, 而不是分片级别工作，以修改或删除与where子句中的条件匹配的所有行。它会删除行，无论它们是否包含整个分片。
 
-Dropping Tables
+删除表
 ---------------
 
-You can use the standard PostgreSQL `DROP TABLE <http://www.postgresql.org/docs/current/static/sql-droptable.html>`_
-command to remove your append distributed tables. As with regular tables, DROP TABLE removes any
-indexes, rules, triggers, and constraints that exist for the target table. In addition, it also
-drops the shards on the worker nodes and cleans up their metadata.
+您可以使用标准`DROP TABLE <http://www.postgresql.org/docs/current/static/sql-droptable.html>`_命令删除追加分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作节点上的分片并清除其元数据。
 
 .. code-block:: postgresql
 
     DROP TABLE github_events;
 
-Data Loading
+数据加载
 ------------
 
-Citus supports two methods to load data into your append distributed tables. The first one is suitable for bulk loads from files and involves using the \\copy command. For use cases requiring smaller, incremental data loads, Citus provides two user defined functions. We describe each of the methods and their usage below.
+Citus支持两种方法将数据加载到追加分布式表中。第一个适用于文件的批量加载，并涉及使用 \\copy 命令。对于需要较小的增量数据加载的用例，Citus提供两个用户定义的函数。我们将在下面描述每种方法及其用法。
 
-Bulk load using \\copy
+使用 \\copy 进行批量加载
 $$$$$$$$$$$$$$$$$$$$$$$
 
-The `\\copy <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_
-command is used to copy data from a file to a distributed table while handling
-replication and failures automatically. You can also use the server side `COPY command <http://www.postgresql.org/docs/current/static/sql-copy.html>`_. 
-In the examples, we use the \\copy command from psql, which sends a COPY .. FROM STDIN to the server and reads files on the client side, whereas COPY from a file would read the file on the server.
+`\\copy <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_命令用于将数据从一个文件复制到一个分布式表，同时自动处理复制和失败。
+您也可以使用服务器端`COPY命令 <http://www.postgresql.org/docs/current/static/sql-copy.html>`_。
+在示例中，我们使用psql中的\\copy命令，它发送COPY .. FROM STDIN到服务器, 并读取客户端上的文件，而来自文件的COPY将读取服务器上的文件。
 
-You can use \\copy both on the coordinator and from any of the workers. When using it from the worker, you need to add the master_host option. Behind the scenes, \\copy first opens a connection to the coordinator using the provided master_host option and uses master_create_empty_shard to create a new shard. Then, the command connects to the workers and copies data into the replicas until the size reaches shard_max_size, at which point another new shard is created. Finally, the command fetches statistics for the shards and updates the metadata.
+您可以在协调者和任何工作者上使用\\copy。从工作者中使用它时，需要添加master_host选项。在幕后，\\copy首先使用提供的master_host选项打开与协调者的连接，并使用master_create_empty_shard创建新的分片。然后，该命令连接到工作者并将数据复制到副本中，直到大小达到shard_max_size，此时将创建另一个新分片。最后，该命令获取分片的统计信息并更新元数据。
 
 .. code-block:: psql
 
     SET citus.shard_max_size TO '64MB';
     \copy github_events from 'github_events-2015-01-01-0.csv' WITH (format CSV, master_host 'coordinator-host')
 
-Citus assigns a unique shard id to each new shard and all its replicas have the same shard id. Each shard is represented on the worker node as a regular PostgreSQL table with name 'tablename_shardid' where tablename is the name of the distributed table and shardid is the unique id assigned to that shard. One can connect to the worker postgres instances to view or run commands on individual shards.
+Citus为每个新分片分配一个唯一的分片ID，并且其所有副本都具有相同的分片ID。每个分片在工作节点上表示为名为'tablename_shardid'的常规PostgreSQL表，其中tablename是分布式表的名称，shardid是分配给该分片的唯一ID。可以连接到工作者postgres实例以查看或运行各个分片上的命令。
 
-By default, the \\copy command depends on two configuration parameters for its behavior. These are called citus.shard_max_size and citus.shard_replication_factor.
+默认情况下，\\copy命令的行为依赖两个配置参数。这些被称为citus.shard_max_size和citus.shard_replication_factor。
 
-(1) **citus.shard_max_size :-** This parameter determines the maximum size of a shard created using \\copy, and defaults to 1 GB. If the file is larger than this parameter, \\copy will break it up into multiple shards.
-(2) **citus.shard_replication_factor :-** This parameter determines the number of nodes each shard gets replicated to, and defaults to one. Set it to two if you want Citus to replicate data automatically and provide fault tolerance. You may want to increase the factor even higher if you run large clusters and observe node failures on a more frequent basis.
+(1) **citus.shard_max_size :-** 此参数确定使用\\copy创建的分片的最大大小，默认为1GB。如果文件大于此参数，\\copy会将其分解为多个分片。
+(2) **citus.shard_replication_factor :-** 此参数确定每个分片复制到的节点数，默认为1。如果希望Citus自动复制数据并提供容错功能，请将其设置为2。如果运行大型集群并更频繁地观察节点故障，您可能希望将该因子提高得更高。
 
-.. note::
-    The configuration setting citus.shard_replication_factor can only be set on the coordinator node.
+.. 注意::
 
-Please note that you can load several files in parallel through separate database connections or from different nodes. It is also worth noting that \\copy always creates at least one shard and does not append to existing shards. You can use the method described below to append to previously created shards.
+    配置设置citus.shard_replication_factor只能在协调器节点上设置。
 
-.. note::
+请注意，您可以通过单独的数据库连接或从不同的节点并行加载多个文件。值得注意的是，\\copy始终创建至少一个分片，并且不会附加到现有分片。您可以使用下面描述的方法附加到以前创建的分片。您可以使用下面描述的方法追加到之前创建的分片后面。
 
-    There is no notion of snapshot isolation across shards, which means that a multi-shard SELECT that runs concurrently with a COPY might see it committed on some shards, but not on others. If the user is storing events data, he may occasionally observe small gaps in recent data. It is up to applications to deal with this if it is a problem (e.g.  exclude the most recent data from queries, or use some lock).
+.. 注意::
 
-    If COPY fails to open a connection for a shard placement then it behaves in the same way as INSERT, namely to mark the placement(s) as inactive unless there are no more active placements. If any other failure occurs after connecting, the transaction is rolled back and thus no metadata changes are made.
+    跨分片没有快照隔离的概念，这意味着与COPY同时运行的多分片SELECT可能会在某些分片上看到它的提交，但在其他分片上却没有。如果用户正在存储事件数据，他可能偶尔会观察到最近数据中的小间隙。如果这是一个问题，则由应用程序来处理(例如，从查询中排除最近的数据，或使用一些锁)。
 
-Incremental loads by appending to existing shards
+    如果COPY无法为分片位置打开连接，则其行为方式与INSERT相同，即将位置标记为非活动状态，除非没有更多活动位置。如果在连接后发生任何其他故障，则回滚事务，因此不会进行元数据更改。
+
+通过附加到现有分片来增量加载
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The \\copy command always creates a new shard when it is used and is best suited for bulk loading of data. Using \\copy to load smaller data increments will result in many small shards which might not be ideal. In order to allow smaller, incremental loads into append distributed tables, Citus provides 2 user defined functions. They are master_create_empty_shard() and master_append_table_to_shard().
+\\copy命令在使用时始终会创建一个新的分片，最适合批量加载数据。使用\\copy加载较小的数据增量将导致许多小分片，这可能不是理想的。为了允许较小的增量加载到附加分布式表中，Citus提供了2个用户定义的函数。它们是master_create_empty_shard()和master_append_table_to_shard()。
 
-master_create_empty_shard() can be used to create new empty shards for a table. This function also replicates the empty shard to citus.shard_replication_factor number of nodes like the \\copy command.
+master_create_empty_shard()可用于为表创建新的空分片。此函数还将空分片复制到citus.shard_replication_factor个节点，类似\\copy命令。
 
-master_append_table_to_shard() can be used to append the contents of a PostgreSQL table to an existing shard. This allows the user to control the shard to which the rows will be appended. It also returns the shard fill ratio which helps to make a decision on whether more data should be appended to this shard or if a new shard should be created.
+master_append_table_to_shard()可用于将PostgreSQL表的内容附加到现有分片。这允许用户控制将哪些行到切分。它还返回分片填充率，这有助于确定是否应将更多数据附加到此分片或是否应创建新分片
 
-To use the above functionality, you can first insert incoming data into a regular PostgreSQL table. You can then create an empty shard using master_create_empty_shard(). Then, using master_append_table_to_shard(), you can append the contents of the staging table to the specified shard, and then subsequently delete the data from the staging table. Once the shard fill ratio returned by the append function becomes close to 1, you can create a new shard and start appending to the new one.
+要使用上述功能，您可以先将传入数据插入常规PostgreSQL表中。然后，您可以使用 master_create_empty_shard()创建空分片。然后，使用 master_append_table_to_shard()，你可以将staging表的内容附加到指定的分片，随后从staging表中删除数据。一旦append函数返回的分片填充率接近1，您就可以创建一个新分片并开始追加到新分片。
 
 .. code-block:: postgresql
 
@@ -197,22 +171,22 @@ To use the above functionality, you can first insert incoming data into a regula
             0.100548
     (1 row)
 
-To learn more about the two UDFs, their arguments and usage, please visit the :ref:`user_defined_functions` section of the documentation.
+要了解有关这两个UDF及其参数和用法的更多信息，请访问文档的:ref:`user_defined_functions`部分。
 
-Increasing data loading performance
+提高数据加载性能
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The methods described above enable you to achieve high bulk load rates which are sufficient for most use cases. If you require even higher data load rates, you can use the functions described above in several ways and write scripts to better control sharding and data loading. The next section explains how to go even faster.
+上面描述的方法使您能够实现高的批量负载率，这对于大多数用例来说已经足够了。如果需要更高的数据加载速率，可以通过多种方式使用上述功能并编写脚本以更好地控制分片和数据加载。下一节将介绍如何更快地完成任务。
 
-Scaling Data Ingestion
+缩放数据摄取
 ----------------------
 
-If your use-case does not require real-time ingests, then using append distributed tables will give you the highest ingest rates. This approach is more suitable for use-cases which use time-series data and where the database can be a few minutes or more behind.
+如果您的用例不需要实时摄取，那么使用追加分布式表将为您提供最高的摄取率。这种方法更适用于使用时间序列数据的用例，数据库可能落后几分钟或更长时间。
 
-Coordinator Node Bulk Ingestion (100k/s-200k/s)
+协调者节点批量摄取(100k/s-200k/s)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-To ingest data into an append distributed table, you can use the `COPY <http://www.postgresql.org/docs/current/static/sql-copy.html>`_ command, which will create a new shard out of the data you ingest. COPY can break up files larger than the configured citus.shard_max_size into multiple shards. COPY for append distributed tables only opens connections for the new shards, which means it behaves a bit differently than COPY for hash distributed tables, which may open connections for all shards. A COPY for append distributed tables command does not ingest rows in parallel over many connections, but it is safe to run many commands in parallel.
+要将数据摄取到追加分布式表中，可以使用 `COPY <http://www.postgresql.org/docs/current/static/sql-copy.html>`_ 命令，该命令将从您提取的数据中创建新的分片。COPY可以将大于配置的citus.shard_max_size的文件分解为多个分片。附加分布式表的COPY只打开新分片的连接，这意味着它的行为与散列分布式表的COPY略有不同，后者可能打开所有碎片的连接。附加分布式表的COPY命令不会在许多连接上并行地摄取行，但是并行地运行许多命令是安全的。
 
 .. code-block:: psql
 
@@ -223,7 +197,7 @@ To ingest data into an append distributed table, you can use the `COPY <http://w
     -- Add data into a new staging table
     \COPY events FROM 'path-to-csv-file' WITH CSV
 
-COPY creates new shards every time it is used, which allows many files to be ingested simultaneously, but may cause issues if queries end up involving thousands of shards. An alternative way to ingest data is to append it to existing shards using the master_append_table_to_shard function. To use master_append_table_to_shard, the data needs to be loaded into a staging table and some custom logic to select an appropriate shard is required.
+COPY每次使用时都会创建新的分片，这样可以同时摄取多个文件，但如果查询最终涉及数千个分片，则可能会导致问题。摄取数据的另一种方法是使用 master_append_table_to_shard 函数将其附加到现有分片。要使用 master_append_table_to_shard，需要将数据加载到临时表中，并且需要一些自定义逻辑来选择适当的分片。
 
 .. code-block:: psql
 
@@ -234,7 +208,7 @@ COPY creates new shards every time it is used, which allows many files to be ing
     -- In a separate transaction, append the staging table
     SELECT master_append_table_to_shard(select_events_shard(), 'stage_1', 'coordinator-host', 5432);
 
-An example of a shard selection function is given below. It appends to a shard until its size is greater than 1GB and then creates a new one, which has the drawback of only allowing one append at a time, but the advantage of bounding shard sizes.
+下面给出了分片选择函数的示例。它附加到一个分片，直到它的大小大于1GB，然后创建一个新的分片，这有一个缺点，一次只允许一个附加，但优势是限制分片大小。
 
 .. code-block:: postgresql
 
@@ -255,7 +229,7 @@ An example of a shard selection function is given below. It appends to a shard u
     END;
     $$ LANGUAGE plpgsql;
 
-It may also be useful to create a sequence to generate a unique name for the staging table. This way each ingestion can be handled independently.
+创建一个序列来为staging表生成一个惟一的名称也可能很有用。这样，每次摄入都可以独立处理。
 
 .. code-block:: postgresql
 
@@ -265,21 +239,22 @@ It may also be useful to create a sequence to generate a unique name for the sta
     -- Generate a stage table name
     SELECT 'stage_'||nextval('stage_id_sequence');
 
-To learn more about the master_append_table_to_shard and master_create_empty_shard UDFs, please visit the :ref:`user_defined_functions` section of the documentation.
+要了解有关 master_append_table_to_shard 和 master_create_empty_shard UDF的更多信息，请访问文档的:ref:`user_defined_functions`部分。
 
-Worker Node Bulk Ingestion (100k/s-1M/s)
+工作节点批量摄取 (100k/s-1M/s)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-For very high data ingestion rates, data can be staged via the workers. This method scales out horizontally and provides the highest ingestion rates, but can be more complex to use. Hence, we recommend trying this method only if your data ingestion rates cannot be addressed by the previously described methods.
+对于非常高的数据摄取率，数据可以通过工作者进行分段。这种方法横向扩展，提供了最高的摄取率，但使用起来可能更复杂。因此，我们建议仅当您的数据摄取率无法通过前面描述的方法解决时，才尝试这种方法。
 
-Append distributed tables support COPY via the worker, by specifying the address of the coordinator in a master_host option, and optionally a master_port option (defaults to 5432). COPY via the workers has the same general properties as COPY via the coordinator, except the initial parsing is not bottlenecked on the coordinator.
+附加分布式表通过工作者支持COPY，通过在master_host选项中指定协调者的地址，以及可选的master_port选项（默认为5432）。通过工作者的COPY与通过协调者的COPY具有相同的常规属性，除了初始解析在协调者上没有瓶颈。
 
 .. code-block:: psql
 
     psql -h worker-host-n -c "\COPY events FROM 'data.csv' WITH (FORMAT CSV, MASTER_HOST 'coordinator-host')"
 
 
-An alternative to using COPY is to create a staging table and use standard SQL clients to append it to the distributed table, which is similar to staging data via the coordinator. An example of staging a file via a worker using psql is as follows:
+使用COPY的另一种选择是创建一个staging表, 并使用标准的SQL客户端将其附加到分布式表中,这类似于通过协调器进行数据分段。
+使用psql通过工作者分段文件的示例如下：
 
 .. code-block:: bash
 
@@ -289,9 +264,9 @@ An alternative to using COPY is to create a staging table and use standard SQL c
     psql -h coordinator-host -c "SELECT master_append_table_to_shard(choose_underutilized_shard(), '$stage_table', 'worker-host-n', 5432)"
     psql -h worker-host-n -c "DROP TABLE $stage_table"
 
-The example above uses a choose_underutilized_shard function to select the shard to which to append. To ensure parallel data ingestion, this function should balance across many different shards.
+上面的示例使用 choose_underutilized_shard 函数来选择要追加的分片。为确保并行数据摄取，此功能应在许多不同的分片之间取得平衡。
 
-An example choose_underutilized_shard function belows randomly picks one of the 20 smallest shards or creates a new one if there are less than 20 under 1GB. This allows 20 concurrent appends, which allows data ingestion of up to 1 million rows/s (depending on indexes, size, capacity).
+下面的示例 choose_underutilized_shard 函数随机选择20个最小的分片中的一个，或者如果1GB以下少于20，则创建一个新分片。这允许20个并发附加，允许数据摄取高达100万行/秒(取决于索引，大小，容量)。
 
 .. code-block:: postgresql
 
@@ -315,17 +290,20 @@ An example choose_underutilized_shard function belows randomly picks one of the 
       RETURN shard_id;
     END;
     $function$;
-    
-A drawback of ingesting into many shards concurrently is that shards may span longer time ranges, which means that queries for a specific time period may involve shards that contain a lot of data outside of that period.
 
-In addition to copying into temporary staging tables, it is also possible to set up tables on the workers which can continuously take INSERTs. In that case, the data has to be periodically moved into a staging table and then appended, but this requires more advanced scripting.
+同时摄入多个分片的缺点是分片可能跨越更长的时间范围，这意味着特定时间段的查询可能涉及包含该时段之外的大量数据的分片。
 
-Pre-processing Data in Citus
+除了复制到临时staging表之外，还可以设置工作者上的表, 可以为这些表连续执行INSERT。在这种情况下，必须定期将数据移动到staging表中，然后追加，但这需要更高级的脚本
+
+Citus中的预处理数据
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-The format in which raw data is delivered often differs from the schema used in the database. For example, the raw data may be in the form of log files in which every line is a JSON object, while in the database table it is more efficient to store common values in separate columns. Moreover, a distributed table should always have a distribution column. Fortunately, PostgreSQL is a very powerful data processing tool. You can apply arbitrary pre-processing using SQL before putting the results into a staging table.
+传递原始数据的格式通常不同于数据库中使用的模式。
+例如, 原始数据可能以日志文件的形式存在, 每一行都是一个JSON对象, 而在数据库表中, 在分开的列中存储公共值更有效率。
+此外，分布式表应始终具有分发列。
+幸运的是，PostgreSQL是一个非常强大的数据处理工具。在将结果放入staging表之前，可以使用SQL应用任意预处理。
 
-For example, assume we have the following table schema and want to load the compressed JSON logs from `githubarchive.org <http://www.githubarchive.org>`_:
+例如，假设我们有以下表模式，并希望从 `githubarchive.org <http://www.githubarchive.org>`_ 加载压缩的JSON日志：
 
 .. code-block:: postgresql
 
@@ -344,7 +322,7 @@ For example, assume we have the following table schema and want to load the comp
     SELECT create_distributed_table('github_events', 'created_at', 'append');
 
 
-To load the data, we can download the data, decompress it, filter out unsupported rows, and extract the fields in which we are interested into a staging table using 3 commands:
+为了加载数据,我们可以下载数据、分解数据、过滤不受支持的行,并使用3个命令提取感兴趣的字段到一个staging表:
 
 .. code-block:: postgresql
 
@@ -366,8 +344,8 @@ To load the data, we can download the data, decompress it, filter out unsupporte
            (data->'org') org,
            (data->>'created_at')::timestamp created_at FROM prepare_1;
 
-You can then use the master_append_table_to_shard function to append this staging table to the distributed table.
+然后,您可以使用 master_append_append_table_to_shard 函数将该staging表附加到分布式表中。
 
-This approach works especially well when staging data via the workers, since the pre-processing itself can be scaled out by running it on many workers in parallel for different chunks of input data.
+这种方法在通过工作者进行数据分段时特别有效, 因为预处理本身可以通过在不同的输入数据块上并行运行许多工作程序来扩展。
 
-For a more complete example, see `Interactive Analytics on GitHub Data using PostgreSQL with Citus <https://www.citusdata.com/blog/14-marco/402-interactive-analytics-github-data-using-postgresql-citus>`_.
+有关更完整的示例，请参阅 `Interactive Analytics on GitHub Data using PostgreSQL with Citus <https://www.citusdata.com/blog/14-marco/402-interactive-analytics-github-data-using-postgresql-citus>`_.
