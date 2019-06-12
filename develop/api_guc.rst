@@ -3,9 +3,9 @@
 配置参考
 =======================
 
-有各种配置参数会影响Citus的行为。这些包括标准PostgreSQL参数和Citus特定参数。要了解更多有关PostgreSQL配置参数的信息，可以访问PostgreSQL文档的`运行时配置 <http://www.postgresql.org/docs/current/static/runtime-config.html>`_ 部分。
+有各种配置参数会影响Citus的行为。这些包括标准PostgreSQL参数和Citus特定参数。要了解更多有关PostgreSQL配置参数的信息，可以访问PostgreSQL文档的 `运行时配置 <http://www.postgresql.org/docs/current/static/runtime-config.html>`_ 部分。
 
-本参考的其余部分旨在讨论Citus特定的配置参数。这些参数可以使用类似PostgreSQL参数修改postgresql.conf的方式设置, 或`使用SET命令 <http://www.postgresql.org/docs/current/static/config-setting.html>`_.
+本参考的其余部分旨在讨论Citus特定的配置参数。这些参数可以使用类似PostgreSQL参数修改postgresql.conf的方式设置, 或 `使用SET命令 <http://www.postgresql.org/docs/current/static/config-setting.html>`_.
 
 例如，您可以使用以下命令更新设置：
 As an example you can update a setting with:
@@ -58,14 +58,14 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 citus.distributed_deadlock_detection_factor (floating point)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-设置在检查分布式死锁之前等待的时间。特别是等待的时间将是这个值乘以PostgreSQL的`deadlock_timeout <https://www.postgresql.org/docs/current/static/runtime-config-locks.html>`_ 设置。默认值为2``2``。值-1禁用分布式死锁检测。
+设置在检查分布式死锁之前等待的时间。特别是等待的时间将是这个值乘以PostgreSQL的 `deadlock_timeout <https://www.postgresql.org/docs/current/static/runtime-config-locks.html>`_ 设置。默认值为 ``2`` 。值-1禁用分布式死锁检测。
 
 .. _node_conninfo:
 
 citus.node_conninfo (text)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-``citus.node_conninfo`` GUC设置非敏感的`libpq连接参数 <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_ 用于所有的节点间的连接。
+``citus.node_conninfo`` GUC设置非敏感的 `libpq连接参数 <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_ 用于所有的节点间的连接。
 
 .. code-block:: postgresql
 
@@ -98,11 +98,11 @@ Citus仅授予选项的白名单子集，即：
 citus.override_table_visibility (boolean)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. 注意::
+.. note::
 
    此GUC仅对Citus MX有影响。
 
-分片以常规表的形式存储在工作节点上，并在其名称后面附加标识符。与常规Citus不同，默认情况下，当用户在psql中运行``\d``时，Citus MX不会在表列表中显示分片。但是，通过更新GUC，可以在MX中显示分片：
+分片以常规表的形式存储在工作节点上，并在其名称后面附加标识符。与常规Citus不同，默认情况下，当用户在psql中运行 ``\d`` 时，Citus MX不会在表列表中显示分片。但是，通过更新GUC，可以在MX中显示分片：
 
 .. code-block:: psql
 
@@ -122,9 +122,9 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
    | public   | test_table_102047  | table  | citus    |
    +----------+--------------------+--------+----------+
 
-现在，分片``test_table``(``test_table_<n>``)出现在列表中。
+现在，分片 ``test_table`` (``test_table_<n>``)出现在列表中。
 
-查看分片的另一种方法是查询:ref:`citus_shards_on_worker <worker_shards>`视图。
+查看分片的另一种方法是查询 :ref:`citus_shards_on_worker <worker_shards>` 视图。
 
 查询统计
 ---------------------------
@@ -132,11 +132,11 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 citus.stat_statements_purge_interval (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. 注意::
+.. note::
 
-   该GUC是Citus企业版的一部分。请`联系我们<https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
+   该GUC是Citus企业版的一部分。请 `联系我们 <https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-设置清除频率, 其维护守护进程从:ref:`citus_stat_statements <citus_stat_statements>`中删除在``pg_stat_statements``中不匹配记录。
+设置清除频率, 其维护守护进程从 :ref:`citus_stat_statements <citus_stat_statements>` 中删除在 ``pg_stat_statements`` 中不匹配记录。
 此配置值设置清除之间的时间间隔以秒为单位，默认值为10.值为0将禁用清除。
 
 .. code-block:: psql
@@ -148,11 +148,11 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 citus.stat_statements_max (integer)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. 注意::
+.. note::
 
-   该GUC是Citus企业版的一部分。请`联系我们<https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
+   该GUC是Citus企业版的一部分。请 `联系我们 <https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-要存储在:ref:`citus_stat_statements <citus_stat_statements>`中的最大行数。默认为50000，可以更改为1000 - 10000000范围内的任何值。
+要存储在 :ref:`citus_stat_statements <citus_stat_statements>` 中的最大行数。默认为50000，可以更改为1000 - 10000000范围内的任何值。
 请注意，每行需要140个字节的存储空间，因此将stat_statements_max设置为最大值10M将占用1.4GB内存。
 
 在重新启动PostgreSQL之前，更改此GUC将不会生效。
@@ -214,9 +214,9 @@ Citus可以使用postgresql-hll扩展计算count(distinct)近似值。此配置�
 citus.task_assignment_policy (enum)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-.. 注意::
+.. note::
 
-   仅当:ref:`shard_replication_factor <replication_factor>`大于1时，或者针对:ref:`reference_tables`的查询，此GUC才适用。
+   仅当 :ref:`shard_replication_factor <replication_factor>` 大于1时，或者针对 :ref:`reference_tables` 的查询，此GUC才适用。
 
 设置将任务分配给工作者时使用的策略。协调员根据分片位置为工作者分配任务。此配置值指定进行这些分配时要使用的策略。目前，有三种可能的任务分配策略可以使用。
 
@@ -256,9 +256,9 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 指定是否自动将DDL更改从协调者传播到所有工作者。默认值是true。由于某些架构更改需要对表进行访问独占锁定，并且因为自动传播按顺序应用于所有工作者，因此可能会使Citus群集暂时响应性降低。您可以选择禁用此设置并手动传播更改。
 
-.. 注意::
+.. note::
 
-  有关DDL传播支持的列表，请参阅:ref:`ddl_prop_support`.
+  有关DDL传播支持的列表，请参阅 :ref:`ddl_prop_support`.
 
 执行器配置
 ------------------------------------------------------------
@@ -294,7 +294,7 @@ Citus有两种执行器类型，用于运行分布式SELECT查询。可以通过
 
 * **task-tracker:** 任务跟踪器执行器非常适合长时间运行的复杂查询，这些查询需要跨工作节点进行数据混洗和高效的资源管理。
 
-此参数可以在运行时设置，并且对协调者有效。有关执行程序的更多详细信息，可以访问我们文档的:ref:`distributed_query_executor`部分。
+此参数可以在运行时设置，并且对协调者有效。有关执行程序的更多详细信息，可以访问我们文档的 :ref:`distributed_query_executor` 部分。
 
 .. _multi_task_logging:
 
@@ -317,7 +317,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 * **error:** 记录严重性级别是ERROR的语句。
 
-请注意，:code:`error`在开发测试期间使用它可能很有用，级别较低的日志比如:code:`log`在实际生产部署期间使用。选择``log``将导致多任务查询出现在数据库日志中，查询显示在"STATEMENT."之后。
+请注意， :code:`error` 在开发测试期间使用它可能很有用，级别较低的日志比如 :code:`log` 在实际生产部署期间使用。选择 ``log`` 将导致多任务查询出现在数据库日志中，查询显示在"STATEMENT."之后。
 
 .. code-block:: text
 
@@ -342,13 +342,13 @@ max_files_per_process (integer)
 
 设置每个服务器进程同时打开文件的最大数目，默认为1000。实时执行器需要为它发送查询的每个分片提供两个文件描述符。增加此配置参数将允许执行器具有更多打开的文件描述符，从而并行处理更多分片。必须在工作者和协调者上进行此更改，并且只能在服务器启动期间完成。
 
-.. 注意::
+.. note::
   除了max_files_per_process之外，还可能需要使用 ulimit 命令增加每个进程的打开文件描述符的内核限制。
 
 citus.enable_repartition_joins (boolean)
 ****************************************
 
-通常，尝试用实时执行器执行:ref:`repartition_joins`将失败并显示错误消息。但是，设置``citus.enable_repartition_joins``为true, 允许Citus临时切换到任务跟踪器执行器以执行连接。默认值为false。
+通常，尝试用实时执行器执行 :ref:`repartition_joins` 将失败并显示错误消息。但是，设置 ``citus.enable_repartition_joins`` 为true, 允许Citus临时切换到任务跟踪器执行器以执行连接。默认值为false。
 
 任务跟踪器执行器配置
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$

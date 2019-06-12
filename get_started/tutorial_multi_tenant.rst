@@ -1,7 +1,7 @@
 .. _multi_tenant_tutorial:
 
 多租户应用
-==========
+==============
 
 在本教程中，我们将使用示例广告分析数据集来演示如何使用Citus为多租户应用程序提供支持。
 
@@ -9,15 +9,15 @@
 
     本教程假定您已安装并运行Citus。如果您没有运行Citus，您可以：
 
-    * 使用 `Citus Cloud <https://console.citusdata.com/users/sign_up>`_配置集群，或
+    * 使用 `Citus Cloud <https://console.citusdata.com/users/sign_up>`_ 配置集群，或
 
     * 使用 :ref:`single_machine_docker` 在本地设置Citus。
 
 
 数据模型和样本数据
------------------
+----------------------
 
-我们将演示为广告分析应用构建数据库，公司可以使用它来查看，更改，分析和管理他们的广告和广告系列（请参阅`示例应用 <http://citus-example-ad-analytics.herokuapp.com/>`_）。这种应用具有典型的多租户系统的良好特性。来自不同租户的数据存储在中央数据库中，每个租户都有自己数据的独立视图。
+我们将演示为广告分析应用构建数据库，公司可以使用它来查看，更改，分析和管理他们的广告和广告系列（请参阅 `示例应用 <http://citus-example-ad-analytics.herokuapp.com/>`_）。这种应用具有典型的多租户系统的良好特性。来自不同租户的数据存储在中央数据库中，每个租户都有自己数据的独立视图。
 
 我们将使用三个Postgres表来表示这些数据。首先，您需要下载这些表的示例数据：
 
@@ -36,7 +36,7 @@
     docker cp ads.csv citus_master:.
 
 创建表
-------
+-----------
 
 首先，您可以使用psql连接到Citus协调者。
 
@@ -100,10 +100,10 @@
     ALTER TABLE ads ADD PRIMARY KEY (id, company_id);
 
 
-分发表和加载数据
----------------
+分布表和加载数据
+--------------------
 
-我们现在继续告诉Citus将这些表分布在集群中的不同节点上。为此，您可以运行:code:`create_distributed_table`并指定要进行分片的表和要对其进行分片的列。在这个案例中，我们将对所有表进行分片:code:`company_id`。
+我们现在继续告诉Citus将这些表分布在集群中的不同节点上。为此，您可以运行 :code:`create_distributed_table` 并指定要进行分片的表和要对其进行分片的列。在这个案例中，我们将用 :code:`company_id` 对所有表进行分片。
 
 .. code-block:: sql
 
@@ -111,9 +111,9 @@
     SELECT create_distributed_table('campaigns', 'company_id');
     SELECT create_distributed_table('ads', 'company_id');
 
-用公司标识符分片的所有表, 允许Citus将表:ref:`组合 <colocation>`在一起，并允许像主键，外键和复杂的跨群集连接功能。您可以在`此处 <https://www.citusdata.com/blog/2016/10/03/designing-your-saas-database-for-high-scalability/>`_ 详细了解此方法的优点。
+用公司标识符分片的所有表, 允许Citus将表 :ref:`组合 <colocation>` 在一起，并允许像主键，外键和复杂的跨群集连接功能。您可以在 `此处 <https://www.citusdata.com/blog/2016/10/03/designing-your-saas-database-for-high-scalability/>`_ 详细了解此方法的优点。
 
-然后，您可以继续使用标准PostgreSQL :code:`\COPY`命令将我们下载的数据加载到表中。如果您将文件下载到其他位置，请确保指定正确的文件路径。
+然后，您可以继续使用标准PostgreSQL :code:`\COPY` 命令将我们下载的数据加载到表中。如果您将文件下载到其他位置，请确保指定正确的文件路径。
 
 .. code-block:: psql
 
@@ -123,9 +123,9 @@
 
 
 运行查询
---------
+-------------
 
-现在我们已经将数据加载到表中，让我们继续并运行一些查询。Citus支持在分布式表使用标准 :code:`INSERT`, :code:`UPDATE` 和 :code:`DELETE`命令插入和修改行，这是面向用户的应用程序典型的交互方式。
+现在我们已经将数据加载到表中，让我们继续并运行一些查询。Citus支持在分布式表使用标准 :code:`INSERT`, :code:`UPDATE` 和 :code:`DELETE` 命令插入和修改行，这是面向用户的应用程序典型的交互方式。
 
 例如，您可以通过运行以下命令来插入新公司：
 

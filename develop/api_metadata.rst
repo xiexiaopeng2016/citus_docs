@@ -133,14 +133,14 @@ pg_dist_placement表跟踪工作节点上的分片复制副本的位置。分配
      102010 |          1 |           0 |           6 |       4
      102011 |          1 |           0 |           7 |       4
 
-.. 注意::
+.. note::
 
-  截至Citus 7.0，类似表:code:`pg_dist_shard_placement`已被弃用。它包括每个位置的节点名称和端口：
+  截至Citus 7.0，类似表 :code:`pg_dist_shard_placement` 已被弃用。它包括每个位置的节点名称和端口：
 
   ::
 
     SELECT * from pg_dist_shard_placement;
-      shardid | shardstate | shardlength | nodename  | nodeport | placementid 
+      shardid | shardstate | shardlength | nodename  | nodeport | placementid
      ---------+------------+-------------+-----------+----------+-------------
        102008 |          1 |           0 | localhost |    12345 |           1
        102008 |          1 |           0 | localhost |    12346 |           2
@@ -150,7 +150,7 @@ pg_dist_placement表跟踪工作节点上的分片复制副本的位置。分配
        102010 |          1 |           0 | localhost |    12345 |           6
        102011 |          1 |           0 | localhost |    12345 |           7
 
-  现在可以通过在groupid 上将pg_dist_placement与:ref:`pg_dist_node <pg_dist_node>`连接来获取该信息。为了兼容性，Citus仍然提供pg_dist_shard_placement作为视图。但是，我们建议尽可能使用新的，更规范化的表。
+  现在可以通过在groupid 上将pg_dist_placement与 :ref:`pg_dist_node <pg_dist_node>` 连接来获取该信息。为了兼容性，Citus仍然提供pg_dist_shard_placement作为视图。但是，我们建议尽可能使用新的，更规范化的表。
 
 分片放置状态
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -158,24 +158,24 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 Citus根据一个per-placement管理分片的健康状况，如果将位置留在服务中会使集群处于不一致的状态，则自动将位置标记为不可用。pg_dist_placement表中的shardstate列用于存储分片展示位置的状态。下面是不同分片放置状态及其表示的简要概述。
 
 
-+----------------+----------------------+---------------------------------------------------------------------------+
-|  State name    |  Shardstate value    |       Description                                                         |
-+================+======================+===========================================================================+
-|   FINALIZED    |           1          | | 这是创建状态的新分片。分片放置在这种状态下被认为是最新的                |
-|                |                      | | 并用于查询计划和执行。  	                                             |
-+----------------+----------------------+---------------------------------------------------------------------------+
-| INACTIVE       |            3         | | 处于此状态的分片展示位置被视为非活动状态,                               |
-|                |                      | | 理所当然的与同一分片的其他副本不同步。                                  |
-|                |                      | | 这种情况可能出现当此展示位置的追加，                                    |
-|                |                      | | 修改（INSERT，UPDATE或DELETE）或DDL操作失败时。                         |
-|                |                      | | 在规划和执行期间，查询规划器将忽略此状态的展示位置。                    |
-|                |                      | | 用户可以使用幕后活动将这些分片数据与完成的副本同步。                    |
-+----------------+----------------------+---------------------------------------------------------------------------+
-|   TO_DELETE    |            4         | | 如果Citus为了响应一个master_apply_delete_command调用,                   |
-|                |                      | | 而尝试删除分片放置并失败，                                              |
-|                |                      | | 放置位置会调整到了这个状态。                                            |
-|                |                      | | 然后，用户可以在后续的后台活动中删除这些分片。                          |
-+----------------+----------------------+---------------------------------------------------------------------------+
++----------------+----------------------+------------------------------------------------------------------------+
+|  State name    |  Shardstate value    |       Description                                                      |
++================+======================+========================================================================+
+|   FINALIZED    |           1          | | 这是创建状态的新分片。分片放置在这种状态下被认为是最新的             |
+|                |                      | | 并用于查询计划和执行。                                               |
++----------------+----------------------+------------------------------------------------------------------------+
+| INACTIVE       |            3         | | 处于此状态的分片展示位置被视为非活动状态,                            |
+|                |                      | | 理所当然的与同一分片的其他副本不同步。                               |
+|                |                      | | 这种情况可能出现当此展示位置的追加，                                 |
+|                |                      | | 修改（INSERT，UPDATE或DELETE）或DDL操作失败时。                      |
+|                |                      | | 在规划和执行期间，查询规划器将忽略此状态的展示位置。                 |
+|                |                      | | 用户可以使用幕后活动将这些分片数据与完成的副本同步。                 |
++----------------+----------------------+------------------------------------------------------------------------+
+|   TO_DELETE    |            4         | | 如果Citus为了响应一个master_apply_delete_command调用,                |
+|                |                      | | 而尝试删除分片放置并失败，                                           |
+|                |                      | | 放置位置会调整到了这个状态。                                         |
+|                |                      | | 然后，用户可以在后续的后台活动中删除这些分片。                       |
++----------------+----------------------+------------------------------------------------------------------------+
 
 
 .. _pg_dist_node:
@@ -223,7 +223,7 @@ pg_dist_node表包含有关集群中工作节点的信息。
 共址组表
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pg_dist_colocation表包含有关哪些表的分片应放在一起或:ref:`co-located <colocation>`的信息。当两个表位于同一个共址组时，Citus会确保具有相同分区值的分片将放置在同一个工作节点上。这使得连接优化，某些分布式汇总和外键支持成为可能。当分片计数，复制因子和分区列类型在两个表之间都匹配时，推断出分片共址; 但是，如果需要，可以在创建分布式表时指定自定义共址组。
+pg_dist_colocation表包含有关哪些表的分片应放在一起或 :ref:`co-located <colocation>` 的信息。当两个表位于同一个共址组时，Citus会确保具有相同分区值的分片将放置在同一个工作节点上。这使得连接优化，某些分布式汇总和外键支持成为可能。当分片计数，复制因子和分区列类型在两个表之间都匹配时，推断出分片共址; 但是，如果需要，可以在创建分布式表时指定自定义共址组。
 
 +------------------------+----------------------+-------------------------------------------------------------------+
 |      Name              |         Type         |       Description                                                 |
@@ -240,7 +240,7 @@ pg_dist_colocation表包含有关哪些表的分片应放在一起或:ref:`co-lo
 ::
 
     SELECT * from pg_dist_colocation;
-      colocationid | shardcount | replicationfactor | distributioncolumntype 
+      colocationid | shardcount | replicationfactor | distributioncolumntype
      --------------+------------+-------------------+------------------------
                  2 |         32 |                 2 |                     20
       (1 row)
@@ -250,12 +250,13 @@ pg_dist_colocation表包含有关哪些表的分片应放在一起或:ref:`co-lo
 查询统计表
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. 注意::
-  citus_stat_statements视图是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
+.. note::
+  citus_stat_statements视图是Citus企业版的一部分。请 `联系我们 <https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-Citus提供``citus_stat_statements``有关如何执行查询以及为谁执行查询的统计信息。它与PostgreSQL中的`pg_stat_statements <https://www.postgresql.org/docs/current/static/pgstatstatements.html>`_视图类似（并且可以与之结合），该视图跟踪有关查询速度的统计信息。
+Citus提供 ``citus_stat_statements`` 有关如何执行查询以及为谁执行查询的统计信息。它与PostgreSQL中的
+`pg_stat_statements <https://www.postgresql.org/docs/current/static/pgstatstatements.html>`_ 视图类似（并且可以与之结合），该视图跟踪有关查询速度的统计信息。
 
-此视图可以跟踪多租户应用程序中的原始租户的查询，这有助于决定何时进行:ref:`tenant_isolation`。
+此视图可以跟踪多租户应用程序中的原始租户的查询，这有助于决定何时进行 :ref:`tenant_isolation` 。
 
 +----------------+--------+---------------------------------------------------------+
 | Name           | Type   | Description                                             |
@@ -268,7 +269,7 @@ Citus提供``citus_stat_statements``有关如何执行查询以及为谁执行�
 +----------------+--------+---------------------------------------------------------+
 | query          | text   | 匿名查询字符串                                          |
 +----------------+--------+---------------------------------------------------------+
-| executor       | text   | Citus :ref:`执行者 <distributed_query_executor>`使用:   |
+| executor       | text   | Citus :ref:`执行者 <distributed_query_executor>` 使用:  |
 |                |        | real-time, task-tracker, router, or insert-select       |
 +----------------+--------+---------------------------------------------------------+
 | partition_key  | text   | 路由器执行的查询中的分发列的值，否则为NULL              |
@@ -307,22 +308,22 @@ Citus提供``citus_stat_statements``有关如何执行查询以及为谁执行�
 注意事项:
 
 * 统计数据不会被复制，并且不会在数据库崩溃或故障转移后继续存在
-* 它是协调者节点功能，没有:ref:`Citus MX <mx>`支持
-* 跟踪由``pg_stat_statements.max`` GUC 设置的有限数量的查询（默认5000）
-* 要截断表，请使用该``citus_stat_statements_reset()``函数
+* 它是协调者节点功能，没有 :ref:`Citus MX <mx>` 支持
+* 跟踪由 ``pg_stat_statements.max`` GUC 设置的有限数量的查询（默认5000）
+* 要截断表，请使用该 ``citus_stat_statements_reset()`` 函数
 
 分布式查询活动
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-使用Citus MX，用户可以从任何节点执行分布式查询。检查协调者上的标准Postgres `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_视图将不包括那些工作者发起的查询。此外，查询可能会在工作节点上的某个分片上的行级锁上被阻塞。如果发生这种情况，那么这些查询将不会显示在Citus协调器者节点上的`pg_locks <https://www.postgresql.org/docs/current/static/view-pg-locks.html>`_中。
+使用Citus MX，用户可以从任何节点执行分布式查询。检查协调者上的标准Postgres `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ 视图将不包括那些工作者发起的查询。此外，查询可能会在工作节点上的某个分片上的行级锁上被阻塞。如果发生这种情况，那么这些查询将不会显示在Citus协调器者节点上的 `pg_locks <https://www.postgresql.org/docs/current/static/view-pg-locks.html>`_ 中。
 
 Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内部使用的特定于分区的查询来构建分布式查询的结果。
 
-* **citus_dist_stat_activity**: 显示在所有节点上执行的分布式查询。一个超集``pg_stat_activity``，可以在后者的任何地方使用。
+* **citus_dist_stat_activity**: 显示在所有节点上执行的分布式查询。一个超集 ``pg_stat_activity`` ，可以在后者的任何地方使用。
 * **citus_worker_stat_activity**: 显示工作者上的查询，包括针对各个分片的片段查询。
 * **citus_lock_waits**: 整个群集中的阻塞的查询。
 
-前两个视图包括`pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_的所有列以及发起查询的工作者的主机主机/端口以及集群的协调器节点的主机/端口。
+前两个视图包括 `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ 的所有列以及发起查询的工作者的主机主机/端口以及集群的协调器节点的主机/端口。
 
 例如，考虑计算分布式表中的行：
 
@@ -332,7 +333,7 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
 
    SELECT count(*) FROM users_table;
 
-我们可以看到查询显示在``citus_dist_stat_activity``：
+我们可以看到查询显示在 ``citus_dist_stat_activity`` ：
 
 .. code-block:: postgres
 
@@ -351,8 +352,8 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
    usesysid               | 10
    usename                | citus
    application_name       | psql
-   client_addr            | 
-   client_hostname        | 
+   client_addr            |
+   client_hostname        |
    client_port            | -1
    backend_start          | 2018-10-05 13:27:14.419905+03
    xact_start             | 2018-10-05 13:27:16.362887+03
@@ -361,13 +362,13 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
    wait_event_type        | Client
    wait_event             | ClientRead
    state                  | idle in transaction
-   backend_xid            | 
-   backend_xmin           | 
+   backend_xid            |
+   backend_xmin           |
    query                  | SELECT count(*) FROM users_table;
    backend_type           | client backend
 
 此查询需要来自所有分片的信息。一些信息在分片users_table_102038中，恰好存储在localhost:9700中。
-我们可以看到一个查询访问分片, 通过查看``citus_worker_stat_activity``视图:
+我们可以看到一个查询访问分片, 通过查看 ``citus_worker_stat_activity`` 视图:
 
 .. code-block:: postgres
 
@@ -387,7 +388,7 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
    usename                | citus
    application_name       | citus
    client_addr            | ::1
-   client_hostname        | 
+   client_hostname        |
    client_port            | 51773
    backend_start          | 2018-10-05 13:27:20.75839+03
    xact_start             | 2018-10-05 13:27:20.84112+03
@@ -396,18 +397,18 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
    wait_event_type        | Client
    wait_event             | ClientRead
    state                  | idle in transaction
-   backend_xid            | 
-   backend_xmin           | 
+   backend_xid            |
+   backend_xmin           |
    query                  | COPY (SELECT count(*) AS count FROM users_table_102038 users_table WHERE true) TO STDOUT
    backend_type           | client backend
 
-该``query``字段显示从要计数的分片中复制的数据。
+该 ``query`` 字段显示从要计数的分片中复制的数据。
 
-.. 注意::
+.. note::
 
-  如果在没有事务块的情况下执行路由器查询(例如，多租户应用程序中的单租户, ``SELECT * FROM table WHERE tenant_id = X``)，则 citus_worker_stat_activity 中的 master_query_host_name 和 master_query_host_port 列将为NULL。
+  如果在没有事务块的情况下执行路由器查询(例如，多租户应用程序中的单租户, ``SELECT * FROM table WHERE tenant_id = X`` )，则 citus_worker_stat_activity 中的 master_query_host_name 和 master_query_host_port 列将为NULL。
 
-要了解其``citus_lock_waits``工作原理，我们可以手动生成锁定情况。首先，我们将从协调员建立一个测试表：
+要了解其 ``citus_lock_waits`` 工作原理，我们可以手动生成锁定情况。首先，我们将从协调员建立一个测试表：
 
 .. code-block:: postgres
 
@@ -427,7 +428,7 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
                                           UPDATE numbers SET j = 3 WHERE i = 1;
                                           -- (this blocks)
 
-该``citus_lock_waits``视图显示了这种情况。
+该 ``citus_lock_waits`` 视图显示了这种情况。
 
 .. code-block:: postgres
 
@@ -457,11 +458,11 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
 连接凭证表
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. 注意::
+.. note::
 
-  此表是是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
+  此表是是Citus企业版的一部分。请 `联系我们 <https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-该``pg_dist_authinfo``表包含Citus节点用于彼此连接的身份验证参数。
+该 ``pg_dist_authinfo`` 表包含Citus节点用于彼此连接的身份验证参数。
 
 +----------+---------+-------------------------------------------------+
 | Name     | Type    | Description                                     |
@@ -473,11 +474,11 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
 | authinfo | text    | 以空格分隔的libpq连接参数                       |
 +----------+---------+-------------------------------------------------+
 
-在开始连接时，节点查询该表以查看是否存在具有目的``nodeid``和期望``rolename``的行。
-如果是，则节点包含相应``authinfo``字符串在其libpq连接中。
-一个常见的例子是存储密码，比如``'password=abc123'``, 但是您可以查看可能用到的`完整列表 <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_。
+在开始连接时，节点查询该表以查看是否存在具有目的 ``nodeid`` 和期望 ``rolename`` 的行。
+如果是，则节点包含相应 ``authinfo`` 字符串在其libpq连接中。
+一个常见的例子是存储密码，比如 ``'password=abc123'`` , 但是您可以查看可能用到的 `完整列表 <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS>`_ 。
 
-``authinfo``中的参数以空格分隔, key=val格式。要写入空值或包含空格的值，请用单引号括起来，例如``keyword='a value'``。值中的单引号和反斜杠必须用反斜杠转义, 例如``\'`` 和 ``\\``。
+ ``authinfo`` 中的参数以空格分隔, key=val格式。要写入空值或包含空格的值，请用单引号括起来，例如 ``keyword='a value'`` 。值中的单引号和反斜杠必须用反斜杠转义, 例如 ``\`` 和  ``\\``。
 
 该 ``nodeid`` 列还可以采用特殊值0和-1，分别表示*所有节点*或*环回连接*。如果, 对于给定节点，同时存在特定和所有节点规则，则特定规则具有优先权。
 
@@ -493,13 +494,13 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
 连接池凭据
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. 注意::
+.. note::
 
-  此表是Citus企业版的一部分。请`联系我们 <https://www.citusdata.com/about/contact_us>`_以获取此功能。
+  此表是Citus企业版的一部分。请 `联系我们 <https://www.citusdata.com/about/contact_us>`_ 以获取此功能。
 
-如果要使用连接池连接到一个节点，可以使用``pg_dist_poolinfo``时指定pooler选项。此元数据表包含Citus在通过连接池连接到一个节点时要使用的主机，端口和数据库名称。
+如果要使用连接池连接到一个节点，可以使用 ``pg_dist_poolinfo`` 时指定pooler选项。此元数据表包含Citus在通过连接池连接到一个节点时要使用的主机，端口和数据库名称。
 
-如果存在池信息，Citus将尝试使用这些值而不是设置直接连接。pg_dist_poolinfo信息在这种情况下取代:ref:`pg_dist_node <pg_dist_node>`。
+如果存在池信息，Citus将尝试使用这些值而不是设置直接连接。pg_dist_poolinfo信息在这种情况下取代 :ref:`pg_dist_node <pg_dist_node>` 。
 
 +----------+---------+---------------------------------------------------+
 | Name     | Type    | Description                                       |
@@ -509,9 +510,9 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
 | poolinfo | text    | 空格分隔的参数: host, port, 或 dbname             |
 +----------+---------+---------------------------------------------------+
 
-.. 注意::
+.. note::
 
-   在某些情况下，Citus会忽略pg_dist_poolinfo中的设置。例如，:ref:`分片再平衡 <shard_rebalancing>`与诸如pgbouncer之类的连接池的连接不兼容。在这些情况下，Citus将使用直接连接。
+   在某些情况下，Citus会忽略pg_dist_poolinfo中的设置。例如， :ref:`分片再平衡 <shard_rebalancing>` 与诸如pgbouncer之类的连接池的连接不兼容。在这些情况下，Citus将使用直接连接。
 
 .. code-block:: sql
 
@@ -525,11 +526,11 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
 MX工作者上的分片和索引
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. 注意::
+.. note::
 
    citus_shards_on_worker和citus_shard_indexes_on_worker视图仅与Citus MX相关。在非MX方案中，它们不包含任何行。
 
-工作节点将分片存储为通常隐藏在Citus MX中的表(请参阅:ref:`override_table_visibility`)。获取每个工作者上的分片信息的最简单方法是查询该工作者的``citus_shards_on_worker``视图。例如，以下是分布式表``test_table``在一个工作者上的一些分片：
+工作节点将分片存储为通常隐藏在Citus MX中的表(请参阅 :ref:`override_table_visibility` )。获取每个工作者上的分片信息的最简单方法是查询该工作者的 ``citus_shards_on_worker`` 视图。例如，以下是分布式表 ``test_table`` 在一个工作者上的一些分片：
 
 .. code-block:: postgres
 
@@ -539,7 +540,7 @@ MX工作者上的分片和索引
     public | test_table_1130000 | table | citus
     public | test_table_1130002 | table | citus
 
-分片的索引也是隐藏的，但可以通过另一个视图发现, ``citus_shard_indexes_on_worker`：
+分片的索引也是隐藏的，但可以通过另一个视图发现, ``citus_shard_indexes_on_worker``：
 
 .. code-block:: postgres
 
@@ -548,4 +549,3 @@ MX工作者上的分片和索引
    --------+--------------------+-------+-------+--------------------
     public | test_index_1130000 | index | citus | test_table_1130000
     public | test_index_1130002 | index | citus | test_table_1130002
-

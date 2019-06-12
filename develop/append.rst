@@ -3,7 +3,7 @@
 追加分步
 ===================
 
-.. 注意::
+.. note::
 
   追加分配是一种需要谨慎使用的专业技术。对于大多数情况，散列分布是更好的选择。
 
@@ -18,7 +18,7 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
 创建和分布表
 ---------------------------------
 
-.. 注意::
+.. note::
 
   下面的说明假定PostgreSQL安装已经在您的path中。如果没有，则需要将其添加到PATH环境变量中。例如：
 
@@ -71,7 +71,7 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
 在追加分布中，用户通常只想跟踪过去几个月/年的数据。
 在这种情况下，不再需要的分片仍然占用磁盘空间。
 为了解决这个问题，Citus提供了一个用户定义的函数master_apply_delete_command()来删除旧的分片。
-该函数将`DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_命令作为输入，并删除与删除条件匹配的所有分片及其元数据。
+该函数将 `DELETE <http://www.postgresql.org/docs/current/static/sql-delete.html>`_ 命令作为输入，并删除与删除条件匹配的所有分片及其元数据。
 
 该函数使用分片元数据来决定是否需要删除分片，因此它要求DELETE语句中的WHERE子句位于分发列上。如果未指定条件，则选择所有分片进行删除。然后，UDF连接到工作节点，并为需要删除的所有分片发出DROP命令。如果特定分片副本的删除查询失败，则该副本将标记为TO DELETE。标记为TO DELETE的分片副本不会被考虑用于将来的查询，可以在以后清除。
 
@@ -85,7 +85,7 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
                                3
     (1 row)
 
-要了解该函数，其参数及其用法的更多信息，请访问我们文档中的:ref:`user_defined_functions`部分。请注意，此功能仅删除分片中的完整分片而不删除单个行。如果您的用例需要实时删除单个行，请参阅以下有关删除数据的部分。
+要了解该函数，其参数及其用法的更多信息，请访问我们文档中的 :ref:`user_defined_functions` 部分。请注意，此功能仅删除分片中的完整分片而不删除单个行。如果您的用例需要实时删除单个行，请参阅以下有关删除数据的部分。
 
 删除数据
 ---------------
@@ -102,7 +102,7 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
 删除表
 ---------------
 
-您可以使用标准`DROP TABLE <http://www.postgresql.org/docs/current/static/sql-droptable.html>`_命令删除追加分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作节点上的分片并清除其元数据。
+您可以使用标准 `DROP TABLE <http://www.postgresql.org/docs/current/static/sql-droptable.html>`_ 命令删除追加分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作节点上的分片并清除其元数据。
 
 .. code-block:: postgresql
 
@@ -114,10 +114,10 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
 Citus支持两种方法将数据加载到追加分布式表中。第一个适用于文件的批量加载，并涉及使用 \\copy 命令。对于需要较小的增量数据加载的用例，Citus提供两个用户定义的函数。我们将在下面描述每种方法及其用法。
 
 使用 \\copy 进行批量加载
-$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-`\\copy <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_命令用于将数据从一个文件复制到一个分布式表，同时自动处理复制和失败。
-您也可以使用服务器端`COPY命令 <http://www.postgresql.org/docs/current/static/sql-copy.html>`_。
+`\\copy <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_ 命令用于将数据从一个文件复制到一个分布式表，同时自动处理复制和失败。
+您也可以使用服务器端 `COPY命令 <http://www.postgresql.org/docs/current/static/sql-copy.html>`_ 。
 在示例中，我们使用psql中的\\copy命令，它发送COPY .. FROM STDIN到服务器, 并读取客户端上的文件，而来自文件的COPY将读取服务器上的文件。
 
 您可以在协调者和任何工作者上使用\\copy。从工作者中使用它时，需要添加master_host选项。在幕后，\\copy首先使用提供的master_host选项打开与协调者的连接，并使用master_create_empty_shard创建新的分片。然后，该命令连接到工作者并将数据复制到副本中，直到大小达到shard_max_size，此时将创建另一个新分片。最后，该命令获取分片的统计信息并更新元数据。
@@ -134,13 +134,13 @@ Citus为每个新分片分配一个唯一的分片ID，并且其所有副本都�
 (1) **citus.shard_max_size :-** 此参数确定使用\\copy创建的分片的最大大小，默认为1GB。如果文件大于此参数，\\copy会将其分解为多个分片。
 (2) **citus.shard_replication_factor :-** 此参数确定每个分片复制到的节点数，默认为1。如果希望Citus自动复制数据并提供容错功能，请将其设置为2。如果运行大型集群并更频繁地观察节点故障，您可能希望将该因子提高得更高。
 
-.. 注意::
+.. note::
 
     配置设置citus.shard_replication_factor只能在协调器节点上设置。
 
 请注意，您可以通过单独的数据库连接或从不同的节点并行加载多个文件。值得注意的是，\\copy始终创建至少一个分片，并且不会附加到现有分片。您可以使用下面描述的方法附加到以前创建的分片。您可以使用下面描述的方法追加到之前创建的分片后面。
 
-.. 注意::
+.. note::
 
     跨分片没有快照隔离的概念，这意味着与COPY同时运行的多分片SELECT可能会在某些分片上看到它的提交，但在其他分片上却没有。如果用户正在存储事件数据，他可能偶尔会观察到最近数据中的小间隙。如果这是一个问题，则由应用程序来处理(例如，从查询中排除最近的数据，或使用一些锁)。
 
@@ -166,12 +166,12 @@ master_append_table_to_shard()可用于将PostgreSQL表的内容附加到现有�
     (1 row)
 
     SELECT * from master_append_table_to_shard(102089, 'github_events_temp', 'master-101', 5432);
-    master_append_table_to_shard 
+    master_append_table_to_shard
     ------------------------------
             0.100548
     (1 row)
 
-要了解有关这两个UDF及其参数和用法的更多信息，请访问文档的:ref:`user_defined_functions`部分。
+要了解有关这两个UDF及其参数和用法的更多信息，请访问文档的 :ref:`user_defined_functions` 部分。
 
 提高数据加载性能
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -239,7 +239,7 @@ COPY每次使用时都会创建新的分片，这样可以同时摄取多个文�
     -- Generate a stage table name
     SELECT 'stage_'||nextval('stage_id_sequence');
 
-要了解有关 master_append_table_to_shard 和 master_create_empty_shard UDF的更多信息，请访问文档的:ref:`user_defined_functions`部分。
+要了解有关 master_append_table_to_shard 和 master_create_empty_shard UDF的更多信息，请访问文档的 :ref:`user_defined_functions` 部分。
 
 工作节点批量摄取 (100k/s-1M/s)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$

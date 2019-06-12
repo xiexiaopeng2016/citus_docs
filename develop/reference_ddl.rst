@@ -1,16 +1,16 @@
 .. _ddl:
 
 创建和修改分布式表（DDL）
-=======================
+==============================
 
-.. 注意::
+.. note::
 
    Citus (包括 :ref:`mx`) 要求仅从协调者节点运行DDL命令
 
 创建和分布表
------------
+-----------------
 
-要创建分布式表，首先需要定义表模式。为此，您可以使用`CREATE TABLE <http://www.postgresql.org/docs/current/static/sql-createtable.html>`_语句以与使用常规PostgreSQL表相同的方式定义表。
+要创建分布式表，首先需要定义表模式。为此，您可以使用 `CREATE TABLE <http://www.postgresql.org/docs/current/static/sql-createtable.html>`_ 语句以与使用常规PostgreSQL表相同的方式定义表。
 
 .. code-block:: sql
 
@@ -39,12 +39,13 @@
 
 每个创建的分片都分配了一个唯一的分片ID，并且其所有副本都具有相同的分片ID。每个分片在工作者节点上表示为名为“tablename_shardid”的常规PostgreSQL表，其中tablename是分布式表的名称，shardid是分配给该分片的唯一ID。您可以连接到工作者节点postgres实例以查看或运行各个分片上的命令。
 
-您现在可以将数据插入到分布式表中并对其运行查询。您还可以在我们文档的Citus实用程序功能中了解有关本节中使用的:ref:`user_defined_functions`的更多信息。
+您现在可以将数据插入到分布式表中并对其运行查询。您还可以在我们文档的Citus实用程序功能中了解有关本节中使用的
+:ref:`user_defined_functions` 的更多信息。
 
 .. _reference_tables:
 
 引用表
-~~~~~~
+~~~~~~~~~~
 
 上述方法将表分配到多个水平分片中，但另一种可能性是将表分配到单个分片中并将分片复制到每个工作者节点。以这种方式分发的表称为引用表。它们用于存储需要由群集中的多个节点频繁访问的数据。
 
@@ -70,7 +71,7 @@
 
   SELECT create_reference_table('states');
 
-现在，诸如购物车的一个计算税的查询可以在没有网络开销的情况下连接:code:`states`表，并且可以向州代码添加外键以便更好地进行验证。
+现在，诸如购物车的一个计算税的查询可以在没有网络开销的情况下连接 :code:`states` 表，并且可以向州代码添加外键以便更好地进行验证。
 
 除了将表分布为单个复制的分片之外，:code:`create_reference_table` UDF 还将其标记为Citus元数据表中的引用表。Citus自动执行两阶段提交(`2PC <https://en.wikipedia.org/wiki/Two-phase_commit_protocol>`_)以修改以这种方式标记的表，从而提供强大的一致性保证。
 
@@ -83,7 +84,7 @@
 有关在多租户应用程序中使用引用表的另一个示例，请参阅 :ref:`mt_ref_tables`。
 
 分布协调者数据
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 如果将现有的PostgreSQL数据库转换为Citus集群的协调者节点，则可以有效地分发其表中的数据，并且对应用程序的中断最小。
 
@@ -102,7 +103,7 @@ The :code:`create_distributed_table` function described earlier works on both em
 
 迁移数据时会阻止表上的写入，并且一旦函数提交，挂起的写入将作为分布式查询处理。（如果函数失败，则查询将再次变为本地。）读取可以正常继续，并在函数提交后成为分布式查询。
 
-.. 注意::
+.. note::
 
   当在它们之间分配许多具有外键的表时，最好在运行 :code:`create_distributed_table` 之前删除外键, 并在分发表之后重新创建它们。当一个表是分布式的，而另一个表不是分布式的时，不能总是强制执行外键。但是外键在分布表和参考表之间*都*支持。
 
@@ -111,11 +112,11 @@ The :code:`create_distributed_table` function described earlier works on both em
 .. _colocation_groups:
 
 共同定位表
----------
+---------------
 
 协同定位是在战术上划分数据，在相同机器上保留相关信息以实现有效的关系操作，同时利用整个数据集的水平可伸缩性的实践。有关更多信息和示例，请参阅 :ref:`colocation`。
 
-表共同定位于组中。要手动控制表的共址组分配，请使用:code:`create_distributed_table`的可选参数:code:`colocate_with`。如果您不关心表的共址，则省略此参数。它默认为该值'default'，该值将表与具有相同分发列类型，分片计数和复制因子的任何其他默认协同定位表分组。
+表共同定位于组中。要手动控制表的共址组分配，请使用 :code:`create_distributed_table` 的可选参数 :code:`colocate_with` 。如果您不关心表的共址，则省略此参数。它默认为该值'default'，该值将表与具有相同分发列类型，分片计数和复制因子的任何其他默认协同定位表分组。
 
 .. code-block:: postgresql
 
@@ -126,7 +127,7 @@ The :code:`create_distributed_table` function described earlier works on both em
   SELECT create_distributed_table('A', 'some_int_col');
   SELECT create_distributed_table('B', 'other_int_col');
 
-如果新表与其可能的隐式共址组中的其他表无关，请指定:code:`colocated_with => 'none'`。
+如果新表与其可能的隐式共址组中的其他表无关，请指定 :code:`colocated_with => 'none'` 。
 
 .. code-block:: postgresql
 
@@ -149,7 +150,7 @@ The :code:`create_distributed_table` function described earlier works on both em
   SELECT create_distributed_table('orders', 'store_id', colocate_with => 'stores');
   SELECT create_distributed_table('products', 'store_id', colocate_with => 'stores');
 
-有关共址组的信息存储在:ref:`pg_dist_colocation <colocation_group_table>`表中，而 :ref:`pg_dist_partition <partition_table>` 显示哪些表分配给哪些组。
+有关共址组的信息存储在 :ref:`pg_dist_colocation <colocation_group_table>` 表中，而 :ref:`pg_dist_partition <partition_table>` 显示哪些表分配给哪些组。
 
 .. _marking_colocation:
 
@@ -158,8 +159,7 @@ The :code:`create_distributed_table` function described earlier works on both em
 
 从Citus 6.0开始，我们将co-location设置为一等的概念，并开始在pg_dist_colocation中跟踪表对共址组的分配。由于Citus 5.x没有这个概念，因此使用Citus 5创建的表没有明确标记为共存于元数据中，即使这些表格在物理上位于同一位置。
 
-由于Citus使用协同定位元数据信息进行查询优化和下推，因此向Citus通知此先前创建的表的共址非常重要。要修复元数据，只需使用mark_tables_colocated将表标记为co- located：
-Since Citus uses co-location metadata information for query optimization and pushdown, it becomes critical to inform Citus of this co-location for previously created tables. To fix the metadata, simply mark the tables as co-located using :ref:`mark_tables_colocated`:
+由于Citus使用协同定位元数据信息进行查询优化和下推，因此向Citus通知此先前创建的表的共址非常重要。要修复元数据，只需使用mark_tables_colocated将表标记为co-located：
 
 .. code-block:: postgresql
 
@@ -171,7 +171,7 @@ Since Citus uses co-location metadata information for query optimization and pus
 此函数要求使用相同的方法，列类型，分片数和复制方法分步表。它不会重新分片或物理移动数据，它只是更新Citus元数据。
 
 删除表
-------
+---------
 
 您可以使用标准PostgreSQL DROP TABLE命令删除分布式表。与常规表一样，DROP TABLE删除目标表存在的所有索引，规则，触发器和约束。此外，它还会删除工作者节点上的分片并清除其元数据。
 
@@ -182,16 +182,16 @@ Since Citus uses co-location metadata information for query optimization and pus
 .. _ddl_prop_support:
 
 修改表
-------
+---------
 
 Citus自动传播多种DDL语句，这意味着在协调者节点上修改分布式表也会更新工作者的分片。其他DDL语句需要手动传播，而某些其他DDL语句则是禁止的，例如那些会修改分发列的语句。尝试运行不符合自动传播条件的DDL将引发错误并使协调者节点上的表保持不变。
 
-以下是传播的DDL语句类别的参考。请注意，可以使用:ref:`配置参数 <enable_ddl_prop>`启用或禁用自动传播。
+以下是传播的DDL语句类别的参考。请注意，可以使用 :ref:`配置参数 <enable_ddl_prop>` 启用或禁用自动传播。
 
 添加/修改列
-~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
-Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current/static/ddl-alter.html>`_命令。添加列或更改其默认值的工作方式与在单机PostgreSQL数据库中的工作方式相同：
+Citus 自动传播大多数 `ALTER TABLE <https://www.postgresql.org/docs/current/static/ddl-alter.html>`_ 命令。添加列或更改其默认值的工作方式与在单机PostgreSQL数据库中的工作方式相同：
 
 .. code-block:: postgresql
 
@@ -221,23 +221,23 @@ Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current
   */
 
 添加/删除约束
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 使用Citus可以让您继续享受关系数据库的安全性，包括数据库约束（请参阅PostgreSQL `文档 <https://www.postgresql.org/docs/current/static/ddl-constraints.html>`_）。由于分布式系统的性质，Citus不会交叉引用工作者节点之间的唯一性约束或参照完整性。
 
 在这些情况下可能会创建外键：
 
 * 在两个本地（非分布式）表之间，
-* 当键包含分发列时，在两个:ref:`共置 <colocation>`的分布式表之间，或
-* 作为一个分布式表引用一个:ref:`引用表 <reference_tables>`
+* 当键包含分发列时，在两个 :ref:`共置 <colocation>` 的分布式表之间，或
+* 作为一个分布式表引用一个 :ref:`引用表 <reference_tables>`
 
 不支持将引用表作为外键约束的*引用*表，即不支持从引用到引用和从引用到分布式的键。
 
 要在共置的分布式表之间设置外键，请始终在键中包含分发列。这可能涉及制作键组合。
 
-.. 注意::
+.. note::
 
-  主键和唯一性约束必须包括分发列。将它们添加到非分发列将生成错误（请参阅:ref:`non_distribution_uniqueness`）。
+  主键和唯一性约束必须包括分发列。将它们添加到非分发列将生成错误（请参阅 :ref:`non_distribution_uniqueness`）。
 
 此示例显示如何在分布式表上创建主键和外键：
 
@@ -294,12 +294,12 @@ Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current
 
 在某些情况下，对新行强制执行约束可能很有用，同时允许现有的不符合行保持不变。Citus使用PostgreSQL的“NOT VALID”约束指定支持CHECK约束和外键的此功能。
 
-例如，考虑将用户配置文件存储在:ref:`引用表 <reference_tables>`中的应用程序。
+例如，考虑将用户配置文件存储在 :ref:`引用表 <reference_tables>` 中的应用程序。
 
 .. code-block:: postgres
 
    -- 我们在这里使用“text”列类型，但是一个真正的应用程序
-   -- 可能使用postgres contrib模块中提供的`citext<https://www.postgresql.org/docs/current/citext.html>`_
+   -- 可能使用postgres contrib模块中提供的 `citext<https://www.postgresql.org/docs/current/citext.html>`_
 
    CREATE TABLE users ( email text PRIMARY KEY );
    SELECT create_reference_table('users');
@@ -341,12 +341,12 @@ Citus 自动传播大多数`ALTER TABLE <https://www.postgresql.org/docs/current
    ALTER TABLE users
    VALIDATE CONSTRAINT syntactic_email;
 
-PostgreSQL文档在 `ALTER TABLE <https://www.postgresql.org/docs/current/sql-altertable.html>`_部分中提供了有关NOT VALID和VALIDATE CONSTRAINT的更多信息。
+PostgreSQL文档在 `ALTER TABLE <https://www.postgresql.org/docs/current/sql-altertable.html>`_ 部分中提供了有关NOT VALID和VALIDATE CONSTRAINT的更多信息。
 
 添加/删除索引
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
-Citus支持添加和删除`索引 <https://www.postgresql.org/docs/current/static/sql-createindex.html>`_：
+Citus支持添加和删除 `索引 <https://www.postgresql.org/docs/current/static/sql-createindex.html>`_：
 
 .. code-block:: postgresql
 
@@ -358,7 +358,7 @@ Citus支持添加和删除`索引 <https://www.postgresql.org/docs/current/stati
 
   DROP INDEX clicked_at_idx;
 
-添加索引需要写入锁定，这在多租户“记录系统”中可能是不合需要的。为了最小化应用程序停机时间，请创建`concurrently <https://www.postgresql.org/docs/current/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY>`_ 索引代替。此方法比标准索引构建需要更多的总工作，并且需要更长的时间才能完成。但是，由于它允许在构建索引时继续正常操作，因此此方法对于在生产环境中添加新索引很有用。
+添加索引需要写入锁定，这在多租户“记录系统”中可能是不合需要的。为了最小化应用程序停机时间，请创建 `concurrently <https://www.postgresql.org/docs/current/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY>`_ 索引代替。此方法比标准索引构建需要更多的总工作，并且需要更长的时间才能完成。但是，由于它允许在构建索引时继续正常操作，因此此方法对于在生产环境中添加新索引很有用。
 
 .. code-block:: postgresql
 
@@ -367,6 +367,6 @@ Citus支持添加和删除`索引 <https://www.postgresql.org/docs/current/stati
   CREATE INDEX CONCURRENTLY clicked_at_idx ON clicks USING BRIN (clicked_at);
 
 手动修改
-~~~~~~~
+~~~~~~~~~~~~
 
 目前，其他DDL命令不会自动传播，但您可以手动传播更改。请参见:ref:`manual_prop`。

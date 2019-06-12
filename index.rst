@@ -53,14 +53,14 @@ Citus文档
   </div>
 
 .. toctree::
-   :caption: Get Started
+   :caption: 开始
    :hidden:
 
    get_started/what_is_citus.rst
    get_started/tutorials.rst
 
 .. toctree::
-   :caption: Install
+   :caption: 安装
    :hidden:
 
    installation/single_machine.rst
@@ -68,7 +68,7 @@ Citus文档
    installation/citus_cloud.rst
 
 .. toctree::
-   :caption: Use-Case Guides
+   :caption: 用户案例指南
    :hidden:
 
    use_cases/multi_tenant.rst
@@ -76,14 +76,14 @@ Citus文档
    use_cases/timeseries.rst
 
 .. toctree::
-   :caption: Architecture
+   :caption: 架构
    :hidden:
 
    get_started/concepts.rst
    arch/mx.rst
 
 .. toctree::
-   :caption: Develop
+   :caption: 开发
    :hidden:
 
    develop/app_type.rst
@@ -94,16 +94,7 @@ Citus文档
    develop/integrations.rst
 
 .. toctree::
-   :caption: Citus Cloud
-   :hidden:
-
-   cloud/getting_started.rst
-   cloud/manage.rst
-   cloud/additional.rst
-   cloud/support.rst
-
-.. toctree::
-   :caption: Administer
+   :caption: 管理
    :hidden:
 
    admin_guide/cluster_management.rst
@@ -111,7 +102,7 @@ Citus文档
    admin_guide/upgrading_citus.rst
 
 .. toctree::
-   :caption: Troubleshoot
+   :caption: 答疑
    :hidden:
 
    performance/performance_tuning.rst
@@ -125,7 +116,7 @@ Citus文档
    faq/faq.rst
 
 .. toctree::
-   :caption: Articles
+   :caption: 文章
    :hidden:
 
    articles/index.rst

@@ -20,7 +20,7 @@
   unzip -d sink $_ && rm $_
 
 下载的kafka-sink-pg-json包含一些配置文件。
-我们想要连接到协调者Citus节点，因此我们必须编辑配置文件``sink/justone-kafka-sink-pg-json-connector.properties``：
+我们想要连接到协调者Citus节点，因此我们必须编辑配置文件 ``sink/justone-kafka-sink-pg-json-connector.properties``：
 
 .. code-block:: sh
 
@@ -44,11 +44,11 @@
   db.json.parse=/@a,/@b
   db.columns=a,b
 
-通知``db.columns``和``db.json.parse``。这些列表的元素匹配，``db.json.parse``指定在传入的JSON对象中查找值的位置。
+通知 ``db.columns`` 和 ``db.json.parse``。这些列表的元素匹配，``db.json.parse`` 指定在传入的JSON对象中查找值的位置。
 
-.. 注意::
+.. note::
 
-  ``db.json.parse``路径以一种允许从JSON中灵活地获取值的语言编写。鉴于以下JSON，
+  ``db.json.parse`` 路径以一种允许从JSON中灵活地获取值的语言编写。鉴于以下JSON，
 
   .. code-block:: json
 
@@ -68,7 +68,7 @@
   * ``/@acceleration/#0`` - 元素0.01的路径
   * ``/@location`` - 元素``{"latitude":51.5009449, "longitude":-2.4773414}``的路径
 
-我们自己的情况很简单。我们的事件将是像``{"a":1, "b":2}``。解析器将这些值拉入同名列。
+我们自己的情况很简单。我们的事件将是像 ``{"a":1, "b":2}``。解析器将这些值拉入同名列。
 
 设置好配置文件之后，就可以准备数据库了。使用psql连接到协调器节点并运行：
 
@@ -113,7 +113,7 @@
     sink/justone-kafka-sink-pg-json-standalone.properties \
     sink/justone-kafka-sink-pg-json-connector.properties
 
-此时Kafka-Connect正在监视test主题，并将在那里解析事件并将其插入``kafka_test``。让我们从命令行发送一个事件。
+此时Kafka-Connect正在监视test主题，并将在那里解析事件并将其插入 ``kafka_test``。让我们从命令行发送一个事件。
 
 .. code-block:: bash
 
@@ -161,7 +161,7 @@
 
   mkdir sparkcitus
 
-创建一个名为``sparkcitus/build.sbt``告诉SBT我们的项目配置的文件，并添加：
+创建一个名为 ``sparkcitus/build.sbt`` 告诉SBT我们的项目配置的文件，并添加：
 
 .. code-block:: scala
 
@@ -182,7 +182,7 @@
     "org.postgresql"   %  "postgresql" % "42.2.2"
   )
 
-接下来创建一个帮助器Scala类，用于通过JDBC进行提取。将以下内容添加到``sparkcitus/copy.scala``：
+接下来创建一个帮助器Scala类，用于通过JDBC进行提取。将以下内容添加到 ``sparkcitus/copy.scala``：
 
 .. code-block:: scala
 
@@ -237,7 +237,7 @@
     }
   }
 
-继续设置，将一些样本数据保存到``people.json``。注意故意缺少周围的方括号。稍后我们将从数据中创建Spark数据帧。
+继续设置，将一些样本数据保存到 ``people.json``。注意故意缺少周围的方括号。稍后我们将从数据中创建Spark数据帧。
 
 .. code-block:: js
 
@@ -314,7 +314,7 @@
 
 这使用CopyHelper来摄取信息。此时，数据将出现在分布式表中。
 
-.. 注意::
+.. note::
 
   Our method of ingesting the dataframe is straightforward but doesn't protect against Spark errors. Spark guarantees "at least once" semantics, i.e. a read error can cause a subsequent read to encounter previously seen data.
 
