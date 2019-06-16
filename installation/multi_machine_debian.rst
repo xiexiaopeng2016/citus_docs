@@ -2,17 +2,17 @@
 
 .. _production_deb:
 
-Ubuntu or Debian
-================
+Ubuntu 或 Debian
+==================
 
-This section describes the steps needed to set up a multi-node Citus cluster on your own Linux machines using deb packages.
+本节介绍使用deb软件包在您自己的Linux计算机上设置多节点Citus群集所需的步骤。
 
 .. _production_deb_all_nodes:
 
-Steps to be executed on all nodes
+在所有节点上执行的步骤
 ---------------------------------
 
-**1. Add repository**
+**1. 添加存储库**
 
 ::
 
@@ -21,7 +21,7 @@ Steps to be executed on all nodes
 
 .. _post_install:
 
-**2. Install PostgreSQL + Citus and initialize a database**
+**2. 安装PostgreSQL + Citus并初始化数据库**
 
 ::
 
@@ -31,13 +31,13 @@ Steps to be executed on all nodes
   # preload citus extension
   sudo pg_conftool 11 main set shared_preload_libraries citus
 
-This installs centralized configuration in `/etc/postgresql/11/main`, and creates a database in `/var/lib/postgresql/11/main`.
+这将在 `/etc/postgresql/11/main` 中安装集中配置，并在 `/var/lib/postgresql/11/main` 中创建数据库。
 
 .. _post_enterprise_deb:
 
-**3. Configure connection and authentication**
+**3. 配置连接和身份验证**
 
-Before starting the database let's change its access permissions. By default the database server listens only to clients on localhost. As a part of this step, we instruct it to listen on all IP interfaces, and then configure the client authentication file to allow all incoming connections from the local network.
+在启动数据库之前，让我们更改其访问权限。默认情况下，数据库服务器仅侦听localhost上的客户端。作为此步骤的一部分，我们指示它侦听所有IP接口，然后配置客户端身份验证文件以允许来自本地网络的所有传入连接。
 
 ::
 
@@ -58,9 +58,9 @@ Before starting the database let's change its access permissions. By default the
   host    all             all             ::1/128                 trust
 
 .. note::
-  Your DNS settings may differ. Also these settings are too permissive for some environments, see our notes about :ref:`worker_security`. The PostgreSQL manual `explains how <http://www.postgresql.org/docs/current/static/auth-pg-hba-conf.html>`_ to make them more restrictive.
+  您的DNS设置可能有所不同。而且这些设置对于某些环境来说过于宽松，请参阅说明关于 :ref:`worker_security`。PostgreSQL手册 `解释如何 <http://www.postgresql.org/docs/current/static/auth-pg-hba-conf.html>`_ 使它们更具限制性。
 
-**4. Start database servers, create Citus extension**
+**4. 启动数据库服务器，创建Citus扩展**
 
 ::
 
@@ -69,7 +69,7 @@ Before starting the database let's change its access permissions. By default the
   # and make it start automatically when computer does
   sudo update-rc.d postgresql enable
 
-You must add the Citus extension to **every database** you would like to use in a cluster. The following example adds the extension to the default database which is named `postgres`.
+您必须将Citus扩展添加到要在群集中使用的 **每个数据库**。以下示例将扩展添加到名为 `postgres` 的默认数据库。
 
 ::
 
@@ -78,37 +78,31 @@ You must add the Citus extension to **every database** you would like to use in 
 
 .. _production_deb_coordinator_node:
 
-Steps to be executed on the coordinator node
+在协调节点上执行的步骤
 --------------------------------------------
 
-The steps listed below must be executed **only** on the coordinator node after the previously mentioned steps have been executed.
+在执行前面提到的步骤之后，必须 **仅** 在协调者节点上执行下面列出的步骤。
 
-**1. Add worker node information**
+**1. 添加工作节点信息**
 
-We need to inform the coordinator about its workers. To add this information,
-we call a UDF which adds the node information to the pg_dist_node
-catalog table. For our example, we assume that there are two workers
-(named worker-101, worker-102). Add the workers' DNS names (or IP
-addresses) and server ports to the table.
+我们需要通知协调者有关其工作者的情况。要添加此信息，我们调用UDF，它将节点信息添加到pg_dist_node登记表中。对于我们的示例，我们假设有两个worker（名为worker-101，worker-102）。将工作者的DNS名称(或IP地址)和服务器端口添加到表中。
 
 ::
 
   sudo -i -u postgres psql -c "SELECT * from master_add_node('worker-101', 5432);"
   sudo -i -u postgres psql -c "SELECT * from master_add_node('worker-102', 5432);"
 
-**2. Verify that installation has succeeded**
+**2. 验证安装是否成功**
 
-To verify that the installation has succeeded, we check that the coordinator node has
-picked up the desired worker configuration. This command when run in the psql
-shell should output the worker nodes we added to the pg_dist_node table above.
+要验证安装是否成功，我们检查协调者节点是否已选择所需的工作者配置。在psql shell中运行此命令应时，应输出我们添加到上面的pg_dist_node表中的工作节点。
 
 ::
 
   sudo -i -u postgres psql -c "SELECT * FROM master_get_active_worker_nodes();"
 
-**Ready to use Citus**
+**准备使用Citus**
 
-At this step, you have completed the installation process and are ready to use your Citus cluster. The new Citus database is accessible in psql through the postgres user:
+在此步骤中，您已完成安装过程并准备好使用Citus群集。可以通过postgres用户在psql中访问新的Citus数据库：
 
 ::
 
@@ -116,4 +110,4 @@ At this step, you have completed the installation process and are ready to use y
 
 .. note::
 
-  Please note that Citus reports anonymous information about your cluster to the Citus Data company servers. To learn more about what information is collected and how to opt out of it, see :ref:`phone_home`.
+  请注意，Citus会向Citus Data公司服务器报告有关您的群集的匿名信息。要了解有关收集哪些信息以及如何选择退出信息的详细信息，请参阅 :ref:`phone_home`。

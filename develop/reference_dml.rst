@@ -1,6 +1,6 @@
 .. _dml:
 
-摄取，修改数据（DML）
+摄取，修改数据（DML)
 ===========================
 
 插入数据
@@ -12,7 +12,7 @@
 
     /*
     CREATE TABLE github_events
-    (
+   (
       event_id bigint,
       event_type text,
       event_public boolean,
@@ -25,9 +25,9 @@
     );
     */
 
-    INSERT INTO github_events VALUES (2489373118,'PublicEvent','t',24509048,'{}','{"id": 24509048, "url": "https://api.github.com/repos/SabinaS/csee6868", "name": "SabinaS/csee6868"}','{"id": 2955009, "url": "https://api.github.com/users/SabinaS", "login": "SabinaS", "avatar_url": "https://avatars.githubusercontent.com/u/2955009?", "gravatar_id": ""}',NULL,'2015-01-01 00:09:13');
+    INSERT INTO github_events VALUES(2489373118,'PublicEvent','t',24509048,'{}','{"id": 24509048, "url": "https://api.github.com/repos/SabinaS/csee6868", "name": "SabinaS/csee6868"}','{"id": 2955009, "url": "https://api.github.com/users/SabinaS", "login": "SabinaS", "avatar_url": "https://avatars.githubusercontent.com/u/2955009?", "gravatar_id": ""}',NULL,'2015-01-01 00:09:13');
 
-    INSERT INTO github_events VALUES (2489368389,'WatchEvent','t',28229924,'{"action": "started"}','{"id": 28229924, "url": "https://api.github.com/repos/inf0rmer/blanket", "name": "inf0rmer/blanket"}','{"id": 1405427, "url": "https://api.github.com/users/tategakibunko", "login": "tategakibunko", "avatar_url": "https://avatars.githubusercontent.com/u/1405427?", "gravatar_id": ""}',NULL,'2015-01-01 00:00:24');
+    INSERT INTO github_events VALUES(2489368389,'WatchEvent','t',28229924,'{"action": "started"}','{"id": 28229924, "url": "https://api.github.com/repos/inf0rmer/blanket", "name": "inf0rmer/blanket"}','{"id": 1405427, "url": "https://api.github.com/users/tategakibunko", "login": "tategakibunko", "avatar_url": "https://avatars.githubusercontent.com/u/1405427?", "gravatar_id": ""}',NULL,'2015-01-01 00:00:24');
 
 将行插入分布式表时，必须指定要插入的行的分布列。根据分布列，Citus确定应将插入路由到的正确分片。然后，查询将转发到正确的分片，并在该分片的所有副本上执行远程插入命令。
 
@@ -36,13 +36,13 @@
 .. code-block:: sql
 
     INSERT INTO github_events VALUES
-      (
+     (
         2489373118,'PublicEvent','t',24509048,'{}','{"id": 24509048, "url": "https://api.github.com/repos/SabinaS/csee6868", "name": "SabinaS/csee6868"}','{"id": 2955009, "url": "https://api.github.com/users/SabinaS", "login": "SabinaS", "avatar_url": "https://avatars.githubusercontent.com/u/2955009?", "gravatar_id": ""}',NULL,'2015-01-01 00:09:13'
-      ), (
+      ),(
         2489368389,'WatchEvent','t',28229924,'{"action": "started"}','{"id": 28229924, "url": "https://api.github.com/repos/inf0rmer/blanket", "name": "inf0rmer/blanket"}','{"id": 1405427, "url": "https://api.github.com/users/tategakibunko", "login": "tategakibunko", "avatar_url": "https://avatars.githubusercontent.com/u/1405427?", "gravatar_id": ""}',NULL,'2015-01-01 00:00:24'
       );
 
-"From Select"子句（分布式汇总）
+"From Select"子句（分布式汇总)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citus还支持 ``INSERT … SELECT`` 语句 - 根据选择查询的结果插入行。这是一种填充表的便捷方式，也允许使用 `ON CONFLICT <https://yq.aliyun.com/articles/74419>`_ 子句"upserts"，这是执行分布式汇总的最简单方法。
@@ -55,7 +55,7 @@ Citus还支持 ``INSERT … SELECT`` 语句 - 根据选择查询的结果插入�
 
 如果对Citus使用的方法有疑问，请使用EXPLAIN命令，如 :ref:`postgresql_tuning` 中所述。
 
-COPY命令（批量加载）
+COPY命令（批量加载)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 要批量加载文件中的数据，可以直接使用 PostgreSQL的 \\ `COPY命令 <http://www.postgresql.org/docs/current/static/app-psql.html#APP-PSQL-META-COMMANDS-COPY>`_。
@@ -71,7 +71,7 @@ COPY命令（批量加载）
 
 .. code-block:: psql
 
-    \COPY github_events FROM 'github_events-2015-01-01-0.csv' WITH (format CSV)
+    \COPY github_events FROM 'github_events-2015-01-01-0.csv' WITH(format CSV)
 
 .. note::
 
@@ -90,13 +90,13 @@ COPY命令（批量加载）
 
 .. code-block:: postgresql
 
-  CREATE TABLE page_views (
+  CREATE TABLE page_views(
     site_id int,
     url text,
     host_ip inet,
     view_time timestamp default now(),
 
-    PRIMARY KEY (site_id, url)
+    PRIMARY KEY(site_id, url)
   );
 
   SELECT create_distributed_table('page_views', 'site_id');
@@ -119,12 +119,12 @@ COPY命令（批量加载）
 
 .. code-block:: postgresql
 
-  CREATE TABLE daily_page_views (
+  CREATE TABLE daily_page_views(
     site_id int,
     day date,
     url text,
     view_count bigint,
-    PRIMARY KEY (site_id, day, url)
+    PRIMARY KEY(site_id, day, url)
   );
 
   SELECT create_distributed_table('daily_page_views', 'site_id');
@@ -136,7 +136,7 @@ COPY命令（批量加载）
 .. code-block:: postgresql
 
   -- roll up yesterday's data
-  INSERT INTO daily_page_views (day, site_id, url, view_count)
+  INSERT INTO daily_page_views(day, site_id, url, view_count)
     SELECT view_time::date AS day, site_id, url, count(*) AS view_count
     FROM page_views
     WHERE view_time >= date '2017-01-01' AND view_time < date '2017-01-02'
@@ -156,12 +156,12 @@ COPY命令（批量加载）
 
   -- 从给定日期开始累积，
   -- 在必要时更新每日页面视图
-  INSERT INTO daily_page_views (day, site_id, url, view_count)
+  INSERT INTO daily_page_views(day, site_id, url, view_count)
     SELECT view_time::date AS day, site_id, url, count(*) AS view_count
     FROM page_views
     WHERE view_time >= date '2017-01-01'
     GROUP BY view_time::date, site_id, url
-    ON CONFLICT (day, url, site_id) DO UPDATE SET
+    ON CONFLICT(day, url, site_id) DO UPDATE SET
       view_count = daily_page_views.view_count + EXCLUDED.view_count;
 
 更新和删除
@@ -172,11 +172,11 @@ COPY命令（批量加载）
 .. code-block:: sql
 
     DELETE FROM github_events
-    WHERE repo_id IN (24509048, 24509049);
+    WHERE repo_id IN(24509048, 24509049);
 
     UPDATE github_events
     SET event_public = TRUE
-    WHERE (org->>'id')::int = 5430905;
+    WHERE(org->>'id')::int = 5430905;
 
 当更新/删除影响多个分片时，如上例所示，Citus默认使用单阶段提交协议。为了更加安全，您可以通过设置启用两阶段提交
 
@@ -194,7 +194,7 @@ COPY命令（批量加载）
   DELETE FROM github_events
   WHERE repo_id = 206084;
 
-此外，在处理单个分片时，Citus支持 ``SELECT … FOR UPDATE``。这是一种有时由对象关系映射器（ORM）用于安全的技术：
+此外，在处理单个分片时，Citus支持 ``SELECT … FOR UPDATE``。这是一种有时由对象关系映射器（ORM)用于安全的技术：
 
 1. 加载行
 2. 在应用程序代码中进行计算

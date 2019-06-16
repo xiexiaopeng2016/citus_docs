@@ -153,7 +153,7 @@
   # this may require "sudo" depending on the docker daemon configuration
   docker-compose up
 
-要摄取到PostgreSQL，我们将编写自定义Scala代码。我们将使用Scala构建工具（SBT）加载依赖项并运行我们的代码，因此请下载SBT并将其安装在您的计算机上。
+要摄取到PostgreSQL，我们将编写自定义Scala代码。我们将使用Scala构建工具（SBT)加载依赖项并运行我们的代码，因此请下载SBT并将其安装在您的计算机上。
 
 接下来为我们的项目创建一个新目录。
 

@@ -1,43 +1,43 @@
 .. _timeseries:
 
-Timeseries Data
+时间序列数据
 ===============
 
-In a time-series workload, applications (such as some :ref:`distributing_by_entity_id`) query recent information, while archiving old information.
+在时间序列工作负载中，应用程序（例如某些 :ref:`distributing_by_entity_id`）在归档旧信息时查询最新信息。
 
-To deal with this workload, a single-node PostgreSQL database would typically use `table partitioning <https://www.postgresql.org/docs/current/static/ddl-partitioning.html>`_ to break a big table of time-ordered data into multiple inherited tables with each containing different time ranges.
+为了处理这种工作负载，单节点PostgreSQL数据库通常会使用 `表分区 <https://www.postgresql.org/docs/current/static/ddl-partitioning.html>`_ 将时间排序数据的大表分成多个继承表，每个表包含不同的时间范围。
 
-Storing data in multiple physical tables speeds up data expiration. In a single big table, deleting rows incurs the cost of scanning to find which to delete, and then `vacuuming <https://www.postgresql.org/docs/10/static/routine-vacuuming.html>`_ the emptied space. On the other hand, dropping a partition is a fast operation independent of data size. It's the equivalent of simply removing files on disk that contain the data.
+在多个物理表中存储数据可加快数据过期。在一个大的表，删除行会增加找到哪些行被删除的扫描成本, 然后 `清空 <https://www.postgresql.org/docs/10/static/routine-vacuuming.html>`_ 空白的空间。另一方面，丢弃分区是一种独立于数据大小的快速操作。它相当于简单地删除包含数据的磁盘上的文件。
 
 .. image:: ../images/timeseries-delete-vs-drop.png
 
-Partitioning a table also makes indices smaller and faster within each date range. Queries operating on recent data are likely to operate on "hot" indices that fit in memory. This speeds up reads.
+对表进行分区还会使索引在每个日期范围内变小和变快。对最近数据进行操作的查询可能在适合内存的“热”索引上运行。这加快了读取速度。
 
 .. image:: ../images/timeseries-multiple-indices-select.png
 
-Also inserts have smaller indices to update, so they go faster too.
+插入也有更小的索引来更新，所以它们也更快。
 
 .. image:: ../images/timeseries-multiple-indices-insert.png
 
-Time-based partitioning makes most sense when:
+在以下情况下，基于时间的分区最有意义：
 
-1. Most queries access a very small subset of the most recent data
-2. Older data is periodically expired (deleted/dropped)
+1. 大多数查询访问最新数据的一小部分
+2. 旧数据定期过期(deleted/dropped)
 
-Keep in mind that, in the wrong situation, reading all these partitions can hurt overhead more than it helps. However in the right situations it is quite helpful. For example, when keeping a year of time series data and regularly querying only the most recent week.
+请记住，在错误的情况下，读取所有这些分区对开销的伤害大于帮助。但是在适当的情况下，这是非常有帮助的。例如，当保存一年的时间序列数据并定期查询最近一周的数据时。
 
-Scaling Timeseries Data on Citus
+在Citus上缩放时间序列数据
 --------------------------------
 
-We can mix the single-node table partitioning techniques with Citus' distributed sharding to make a scalable time-series database. It's the best of both worlds. It's especially elegant atop the declarative table partitioning in Postgres 10.
+我们可以将单节点表分区技术与Citus的分布式分片技术相结合，构建一个可伸缩的时间序列数据库。这是两全其美的。它在Postgres 10的声明式表分区上尤其优雅。
 
 .. image:: ../images/timeseries-sharding-and-partitioning.png
 
-For example, let's distribute *and* partition a table holding historical `GitHub events data <https://examples.citusdata.com/events.csv>`__.
+例如，让我们分发 *和* 分区一个包含历史 `GitHub事件数据 <https://examples.citusdata.com/events.csv>`_ 的表。
 
-Each record in this GitHub data set represents an event created in GitHub, along with key information regarding the event such as event type, creation date, and the user who created the event.
+这个GitHub数据集中的每个记录都表示在GitHub中创建的一个事件，以及与该事件相关的关键信息，如事件类型、创建日期和创建该事件的用户。
 
-The first step is to create and partition the table by time as we would in a single-node PostgreSQL database:
+第一步是按时间创建和分区表，就像我们在单节点PostgreSQL数据库中所做的那样:
 
 .. code-block:: postgresql
 
@@ -56,17 +56,17 @@ The first step is to create and partition the table by time as we would in a sin
     created_at timestamp
   ) PARTITION BY RANGE (created_at);
 
-Notice the ``PARTITION BY RANGE (created_at)``. This tells Postgres that the table will be partitioned by the ``created_at`` column in ordered ranges. We have not yet created any partitions for specific ranges, though.
+请注意 ``PARTITION BY RANGE (created_at)``。这告诉Postgres该表将按有序范围中的 ``created_at`` 列进行分区。不过，我们还没有为特定范围创建任何分区。
 
-Before creating specific partitions, let's distribute the table in Citus. We'll shard by ``repo_id``, meaning the events will be clustered into shards per repository.
+在创建特定分区之前，让我们在Citus中分布表。我们将用 ``repo_id`` 对其进行分片，这意味着事件将被聚集到每个存储库的分片中。
 
 .. code-block:: postgresql
 
   SELECT create_distributed_table('github.events', 'repo_id');
 
-At this point Citus has created shards for this table across worker nodes. Internally each shard is a table with the name ``github.events_N`` for each shard identifier N. Also, Citus propagated the partitioning information, and each of these shards has ``Partition key: RANGE (created_at)`` declared.
+此时，Citus已跨工作节点为此表创建了分片。在内部，每个分片都是一个名为 ``github.events_N`` 的表，每个分片标识符为N。此外，Citus传播了分区信息，并且每个分片都已声明 ``Partition key: RANGE (created_at)``。
 
-A partitioned table cannot directly contain data, it is more like a view across its partitions. Thus the shards are not yet ready to hold data. We need to manually create partitions and specify their time ranges, after which we can insert data that match the ranges.
+分区表不能直接包含数据，它更像是跨分区的视图。因此，分片尚未准备好保存数据。我们需要手动创建分区并指定它们的时间范围，之后我们可以插入与范围匹配的数据。
 
 .. code-block:: postgresql
 
@@ -74,14 +74,14 @@ A partitioned table cannot directly contain data, it is more like a view across 
   CREATE TABLE github.events_2016 PARTITION OF github.events
   FOR VALUES FROM ('2016-01-01') TO ('2016-12-31');
 
-The coordinator node now has the tables ``github.events`` and ``github.events_2016``. Citus will propagate partition creation to all the shards, creating a partition for each shard.
+协调者节点现在具有表 ``github.events`` 和 ``github.events_2016``。Citus会将分区创建传播到所有分片，为每个分片创建一个分区。
 
-Automating Partition Creation
+自动创建分区
 -----------------------------
 
-In the previous section we manually created a partition of the ``github.events`` table. It's tedious to keep doing this, especially when using narrower partitions holding less than a year's range of data. It's more pleasant to let the `pg_partman extension <https://github.com/keithf4/pg_partman>`_ automatically create partitions on demand. The core functionality of pg_partman works out of the box with Citus when using it with native partitioning.
+在上一节中，我们手动创建了 ``github.events`` 表的分区。继续这样做是很繁琐的，特别是当使用较少的分区保存不到一年的数据时。让 `pg_partman 扩展 <https://github.com/keithf4/pg_partman>`_ 按需自动创建分区更令人愉快。pg_partman的核心功能与Citus一起开箱即用，当它与本机分区一起使用时。
 
-First clone, build, and install the pg_partman extension. Then tell partman we want to make partitions that each hold one hour of data. This will create the initial empty hourly partitions:
+首先克隆，构建, 并安装pg_partman扩展。然后告诉partman我们想要创建每个持有一小时数据的分区。这将创建初始空的每小时分区：
 
 .. code-block:: sql
 
@@ -92,7 +92,7 @@ First clone, build, and install the pg_partman extension. Then tell partman we w
   SELECT partman.create_parent('github.events', 'created_at', 'native', 'hourly');
   UPDATE partman.part_config SET infinite_time_partitions = true;
 
-Running ``\d+ github.events`` will now show more partitions:
+运行 ``\d+ github.events`` 现在会显示更多的分区:
 
 ::
 
@@ -121,9 +121,9 @@ Running ``\d+ github.events`` will now show more partitions:
               github.events_p2018_01_15_1500 FOR VALUES FROM ('2018-01-15 15:00:00') TO ('2018-01-15 16:00:00')
 
 
-By default ``create_parent`` creates four partitions in the past, four in the future, and one for the present, all based on system time. If you need to backfill older data, you can specify a ``p_start_partition`` parameter in the call to ``create_parent``, or ``p_premake`` to make partitions for the future. See the `pg_partman documentation <https://github.com/keithf4/pg_partman/blob/master/doc/pg_partman.md>`_ for details.
+默认情况下 ``create_parent`` 在过去创建四个分区，将来创建四个分区，现在创建一个分区，所有这些都基于系统时间。如果需要填充旧数据，可以在调用 ``create_parent`` 或 ``p_premake`` 时指定 ``p_start_partition`` 参数，以便为将来创建分区。有关详细信息，请参阅  `pg_partman 文档 <https://github.com/keithf4/pg_partman/blob/master/doc/pg_partman.md>`_。
 
-As time progresses, pg_partman will need to do some maintenance to create new partitions and drop old ones. Anytime you want to trigger maintenance, call:
+随着时间的推移，pg_partman将需要进行一些维护以创建新分区并删除旧分区。无论何时您想触发维护，调用：
 
 .. code-block:: postgresql
 
@@ -131,7 +131,7 @@ As time progresses, pg_partman will need to do some maintenance to create new pa
   -- due to aggressive locks
   SELECT partman.run_maintenance(p_analyze := false);
 
-It's best to set up a periodic job to run the maintenance function. Pg_partman can be built with support for a background worker (BGW) process to do this. Or we can use another extension like `pg_cron <https://github.com/citusdata/pg_cron>`_:
+最好设置定时任务来运行维护功能。可以构建Pg_partman以支持后台工作者（BGW）进程来执行此操作。或者我们可以使用另一个扩展，如 `pg_cron <https://github.com/citusdata/pg_cron>`_：
 
 .. code-block:: postgresql
 
@@ -139,9 +139,9 @@ It's best to set up a periodic job to run the maintenance function. Pg_partman c
     SELECT partman.run_maintenance(p_analyze := false);
   $$);
 
-Once periodic maintenance is set up, you no longer have to think about the partitions, they just work.
+一旦建立了定期维护，您就不再需要考虑分区，它们会正常的工作。
 
-Finally, to configure pg_partman to drop old partitions, you can update the ``partman.part_config`` table:
+最后，要配置pg_partman以删除旧分区，您可以更新 ``partman.part_config`` 表：
 
 .. code-block:: postgresql
 
@@ -150,8 +150,8 @@ Finally, to configure pg_partman to drop old partitions, you can update the ``pa
          retention = '1 month'
    WHERE parent_table = 'github.events';
 
-Now whenever maintenance runs, partitions older than a month are automatically dropped.
+现在，只要维护运行，就会自动删除超过一个月的分区。
 
 .. note::
 
-  Be aware that native partitioning in Postgres is still quite new and has a few quirks. For example, you cannot directly create an in index on a partitioned table. Instead, pg_partman lets you create a template table to define indexes for new partitions. Maintenance operations on partitioned tables will also acquire aggressive locks that can briefly stall queries. There is currently a lot of work going on within the postgres community to resolve these issues, so expect time partitioning in Postgres to only get better.
+  请注意，Postgres中的本地分区仍然很新，并且有一些怪癖。例如，不能直接在分区表上创建in索引。相反，pg_partman允许您创建一个模板表来为新分区定义索引。分区表上的维护操作还将获得入侵锁，这可能会暂时阻止查询。目前，postgres社区正在进行大量工作来解决这些问题，所以可以预期，postgres中的时间分配只会变得更好。

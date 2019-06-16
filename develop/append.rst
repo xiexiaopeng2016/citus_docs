@@ -41,7 +41,7 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
     -- psql -h localhost -d postgres
 
     CREATE TABLE github_events
-    (
+   (
     	event_id bigint,
     	event_type text,
     	event_public boolean,
@@ -83,7 +83,7 @@ Citus使用稍微不同的语法来创建和操作append和hash分布表。此�
      master_apply_delete_command
     -----------------------------
                                3
-    (1 row)
+   (1 row)
 
 要了解该函数，其参数及其用法的更多信息，请访问我们文档中的 :ref:`user_defined_functions` 部分。请注意，此功能仅删除分片中的完整分片而不删除单个行。如果您的用例需要实时删除单个行，请参阅以下有关删除数据的部分。
 
@@ -125,7 +125,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. code-block:: psql
 
     SET citus.shard_max_size TO '64MB';
-    \copy github_events from 'github_events-2015-01-01-0.csv' WITH (format CSV, master_host 'coordinator-host')
+    \copy github_events from 'github_events-2015-01-01-0.csv' WITH(format CSV, master_host 'coordinator-host')
 
 Citus为每个新分片分配一个唯一的分片ID，并且其所有副本都具有相同的分片ID。每个分片在工作节点上表示为名为'tablename_shardid'的常规PostgreSQL表，其中tablename是分布式表的名称，shardid是分配给该分片的唯一ID。可以连接到工作者postgres实例以查看或运行各个分片上的命令。
 
@@ -163,13 +163,13 @@ master_append_table_to_shard()可用于将PostgreSQL表的内容附加到现有�
     master_create_empty_shard
     ---------------------------
                     102089
-    (1 row)
+   (1 row)
 
     SELECT * from master_append_table_to_shard(102089, 'github_events_temp', 'master-101', 5432);
     master_append_table_to_shard
     ------------------------------
             0.100548
-    (1 row)
+   (1 row)
 
 要了解有关这两个UDF及其参数和用法的更多信息，请访问文档的 :ref:`user_defined_functions` 部分。
 
@@ -191,7 +191,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. code-block:: psql
 
     -- Set up the events table
-    CREATE TABLE events (time timestamp, data jsonb);
+    CREATE TABLE events(time timestamp, data jsonb);
     SELECT create_distributed_table('events', 'time', 'append');
 
     -- Add data into a new staging table
@@ -202,7 +202,7 @@ COPY每次使用时都会创建新的分片，这样可以同时摄取多个文�
 .. code-block:: psql
 
     -- Prepare a staging table
-    CREATE TABLE stage_1 (LIKE events);
+    CREATE TABLE stage_1(LIKE events);
     \COPY stage_1 FROM 'path-to-csv-file WITH CSV
 
     -- In a separate transaction, append the staging table
@@ -217,7 +217,7 @@ COPY每次使用时都会创建新的分片，这样可以同时摄取多个文�
       shard_id bigint;
     BEGIN
       SELECT shardid INTO shard_id
-      FROM pg_dist_shard JOIN pg_dist_placement USING (shardid)
+      FROM pg_dist_shard JOIN pg_dist_placement USING(shardid)
       WHERE logicalrelid = 'events'::regclass AND shardlength < 1024*1024*1024;
 
       IF shard_id IS NULL THEN
@@ -241,16 +241,16 @@ COPY每次使用时都会创建新的分片，这样可以同时摄取多个文�
 
 要了解有关 master_append_table_to_shard 和 master_create_empty_shard UDF的更多信息，请访问文档的 :ref:`user_defined_functions` 部分。
 
-工作节点批量摄取 (100k/s-1M/s)
+工作节点批量摄取(100k/s-1M/s)
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 对于非常高的数据摄取率，数据可以通过工作者进行分段。这种方法横向扩展，提供了最高的摄取率，但使用起来可能更复杂。因此，我们建议仅当您的数据摄取率无法通过前面描述的方法解决时，才尝试这种方法。
 
-附加分布式表通过工作者支持COPY，通过在master_host选项中指定协调者的地址，以及可选的master_port选项（默认为5432）。通过工作者的COPY与通过协调者的COPY具有相同的常规属性，除了初始解析在协调者上没有瓶颈。
+附加分布式表通过工作者支持COPY，通过在master_host选项中指定协调者的地址，以及可选的master_port选项（默认为5432)。通过工作者的COPY与通过协调者的COPY具有相同的常规属性，除了初始解析在协调者上没有瓶颈。
 
 .. code-block:: psql
 
-    psql -h worker-host-n -c "\COPY events FROM 'data.csv' WITH (FORMAT CSV, MASTER_HOST 'coordinator-host')"
+    psql -h worker-host-n -c "\COPY events FROM 'data.csv' WITH(FORMAT CSV, MASTER_HOST 'coordinator-host')"
 
 
 使用COPY的另一种选择是创建一个staging表, 并使用标准的SQL客户端将其附加到分布式表中,这类似于通过协调器进行数据分段。
@@ -259,7 +259,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. code-block:: bash
 
     stage_table=$(psql -tA -h worker-host-n -c "SELECT 'stage_'||nextval('stage_id_sequence')")
-    psql -h worker-host-n -c "CREATE TABLE $stage_table (time timestamp, data jsonb)"
+    psql -h worker-host-n -c "CREATE TABLE $stage_table(time timestamp, data jsonb)"
     psql -h worker-host-n -c "\COPY $stage_table FROM 'data.csv' WITH CSV"
     psql -h coordinator-host -c "SELECT master_append_table_to_shard(choose_underutilized_shard(), '$stage_table', 'worker-host-n', 5432)"
     psql -h worker-host-n -c "DROP TABLE $stage_table"
@@ -278,8 +278,8 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
       shard_id bigint;
       num_small_shards int;
     BEGIN
-      SELECT shardid, count(*) OVER () INTO shard_id, num_small_shards
-      FROM pg_dist_shard JOIN pg_dist_placement USING (shardid)
+      SELECT shardid, count(*) OVER() INTO shard_id, num_small_shards
+      FROM pg_dist_shard JOIN pg_dist_placement USING(shardid)
       WHERE logicalrelid = 'events'::regclass AND shardlength < 1024*1024*1024
       GROUP BY shardid ORDER BY RANDOM() ASC;
 
@@ -308,7 +308,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. code-block:: postgresql
 
     CREATE TABLE github_events
-    (
+   (
         event_id bigint,
         event_type text,
         event_public boolean,
@@ -326,7 +326,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 .. code-block:: postgresql
 
-    CREATE TEMPORARY TABLE prepare_1 (data jsonb);
+    CREATE TEMPORARY TABLE prepare_1(data jsonb);
 
     -- Load a file directly from Github archive and filter out rows with unescaped 0-bytes
     COPY prepare_1 FROM PROGRAM
@@ -335,14 +335,14 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
     -- Prepare a staging table
     CREATE TABLE stage_1 AS
-    SELECT (data->>'id')::bigint event_id,
-           (data->>'type') event_type,
-           (data->>'public')::boolean event_public,
-           (data->'repo'->>'id')::bigint repo_id,
-           (data->'payload') payload,
-           (data->'actor') actor,
-           (data->'org') org,
-           (data->>'created_at')::timestamp created_at FROM prepare_1;
+    SELECT(data->>'id')::bigint event_id,
+          (data->>'type') event_type,
+          (data->>'public')::boolean event_public,
+          (data->'repo'->>'id')::bigint repo_id,
+          (data->'payload') payload,
+          (data->'actor') actor,
+          (data->'org') org,
+          (data->>'created_at')::timestamp created_at FROM prepare_1;
 
 然后,您可以使用 master_append_append_table_to_shard 函数将该staging表附加到分布式表中。
 

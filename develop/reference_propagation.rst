@@ -5,7 +5,7 @@
 
 当用户发出查询时，Citus协调者将其划分为较小的查询片段，其中每个查询片段可以在工作者分片上独立运行。这允许Citus在群集中分发每个查询。
 
-但是，查询被分区为片段的方式（以及传播哪些查询）因查询类型而异。在某些高级情况下，手动控制这种行为非常有用。Citus提供实用函数将SQL传播给工作者、分片或placement。
+但是，查询被分区为片段的方式（以及传播哪些查询)因查询类型而异。在某些高级情况下，手动控制这种行为非常有用。Citus提供实用函数将SQL传播给工作者、分片或placement。
 
 手动查询传播绕过协调者逻辑，锁定和任何其他一致性检查。这些函数作为最后的手段可用于允许Citus本身不运行的语句。请谨慎使用它们以避免数据不一致和死锁。
 
@@ -50,8 +50,8 @@
         SELECT reltuples
           FROM pg_class c
           JOIN pg_catalog.pg_namespace n on n.oid=c.relnamespace
-         WHERE (n.nspname || '.' || relname)::regclass = '%s'::regclass
-           AND n.nspname NOT IN ('citus', 'pg_toast', 'pg_catalog')
+         WHERE(n.nspname || '.' || relname)::regclass = '%s'::regclass
+           AND n.nspname NOT IN('citus', 'pg_toast', 'pg_catalog')
       $cmd$
     );
 
@@ -59,7 +59,7 @@
 在所有位置上运行
 ---------------------
 
-最精细的执行级别是跨所有分片及其副本（也称为 :ref:`位置 <placements>`）运行命令。它对于运行数据修改命令非常有用，这些命令必须应用于每个副本以确保一致性。
+最精细的执行级别是跨所有分片及其副本（也称为 :ref:`位置 <placements>`)运行命令。它对于运行数据修改命令非常有用，这些命令必须应用于每个副本以确保一致性。
 
 例如，假设分布式表具有 :code:`updated_at` 字段，并且我们想要“触摸”所有行，以便在特定时间将它们标记为已更新。协调者上的普通UPDATE语句需要分发列的过滤器，但我们可以跨所有分片和副本手动传播更新：
 
@@ -81,8 +81,8 @@
 .. code-block:: postgresql
 
   -- Suppose we have two distributed tables
-  CREATE TABLE little_vals (key int, val int);
-  CREATE TABLE big_vals    (key int, val int);
+  CREATE TABLE little_vals(key int, val int);
+  CREATE TABLE big_vals   (key int, val int);
   SELECT create_distributed_table('little_vals', 'key');
   SELECT create_distributed_table('big_vals',    'key');
 
@@ -94,9 +94,9 @@
   SELECT run_command_on_workers($cmd$
     CREATE OR REPLACE FUNCTION embiggen() RETURNS TRIGGER AS $$
       BEGIN
-        IF (TG_OP = 'INSERT') THEN
+        IF(TG_OP = 'INSERT') THEN
           EXECUTE format(
-            'INSERT INTO %s (key, val) SELECT ($1).key, ($1).val*2;',
+            'INSERT INTO %s(key, val) SELECT($1).key,($1).val*2;',
             TG_ARGV[0]
           ) USING NEW;
         END IF;

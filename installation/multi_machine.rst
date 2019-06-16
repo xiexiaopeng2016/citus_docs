@@ -1,11 +1,9 @@
 .. _production:
 
-Multi-Machine Cluster
+多机群集
 ---------------------
 
-The :ref:`development` section has instructions on installing a Citus cluster on
-one machine.  If you are looking to deploy Citus across multiple nodes, you can
-use the guide below.
+在 :ref:`development` 一节有一台机器上安装Citus集群的说明。如果您希望在多个节点上部署Citus，可以使用下面的指南。
 
 .. toctree::
 

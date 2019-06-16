@@ -8,7 +8,7 @@ SQL支持和解决方法
 对于能够在单个工作节点上执行的任何查询，Citus具有100％的SQL覆盖率。
 这些类型的查询称为 :ref:`router executable <router_executor>`，在访问有关单个租户的信息时，在 :ref:`mt_use_case` 中很常见。
 
-甚至跨节点查询（用于并行计算）也支持大多数SQL功能。但是，对于组合来自多个节点的信息的查询，不支持某些SQL特性。
+甚至跨节点查询（用于并行计算)也支持大多数SQL功能。但是，对于组合来自多个节点的信息的查询，不支持某些SQL特性。
 
 **跨节点SQL查询的限制:**
 
@@ -16,11 +16,11 @@ SQL支持和解决方法
 * `SELECT … FOR UPDATE <https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FOR-UPDATE-SHARE>`_
  仅在 :ref:`router_executor` 查询中工作
 * `TABLESAMPLE <https://www.postgresql.org/docs/current/static/sql-select.html#SQL-FROM>`_ 仅在 :ref:`router_executor` 查询中工作
-* 仅当关联位于 :ref:`dist_column` 上且子查询符合子查询下推规则（例如，通过分发列进行分组，没有LIMIT或LIMIT OFFSET子句）时，才支持相关子查询。
+* 仅当关联位于 :ref:`dist_column` 上且子查询符合子查询下推规则（例如，通过分发列进行分组，没有LIMIT或LIMIT OFFSET子句)时，才支持相关子查询。
 * `递归 CTEs <https://www.postgresql.org/docs/current/static/queries-with.html#idm46428713247840>`_ 仅在 :ref:`router_executor` 查询中起作用
 * `Grouping sets <https://www.postgresql.org/docs/current/static/queries-table-expressions.html#QUERIES-GROUPING-SETS>`_ 仅适用于 :ref:`router_executor` 查询
 
-要了解有关PostgreSQL及其功能的更多信息，可以访问 `PostgreSQL文档 <http://www.postgresql.org/docs/current/static/index.html>`_。有关PostgreSQL SQL命令方言（Citus用户可以使用）的详细参考，您可以看到 `SQL命令参考 <http://www.postgresql.org/docs/current/static/sql-commands.html>`_。
+要了解有关PostgreSQL及其功能的更多信息，可以访问 `PostgreSQL文档 <http://www.postgresql.org/docs/current/static/index.html>`_。有关PostgreSQL SQL命令方言（Citus用户可以使用)的详细参考，您可以看到 `SQL命令参考 <http://www.postgresql.org/docs/current/static/sql-commands.html>`_。
 
 .. _workarounds:
 
@@ -40,11 +40,11 @@ Citus支持多租户用例中的所有SQL语句。即使在实时分析用例中
 
 .. code-block:: sql
 
-  SELECT * FROM local JOIN dist USING (id);
+  SELECT * FROM local JOIN dist USING(id);
 
   /*
   ERROR:  relation local is not distributed
-  STATEMENT:  SELECT * FROM local JOIN dist USING (id);
+  STATEMENT:  SELECT * FROM local JOIN dist USING(id);
   ERROR:  XX000: relation local is not distributed
   LOCATION:  DistributedTableCacheEntry, metadata_cache.c:711
   */
@@ -56,14 +56,14 @@ Citus支持多租户用例中的所有SQL语句。即使在实时分析用例中
   -- either
 
   SELECT *
-    FROM (SELECT * FROM local) AS x
-    JOIN dist USING (id);
+    FROM(SELECT * FROM local) AS x
+    JOIN dist USING(id);
 
   -- or
 
-  WITH x AS (SELECT * FROM local)
+  WITH x AS(SELECT * FROM local)
   SELECT * FROM x
-  JOIN dist USING (id);
+  JOIN dist USING(id);
 
 请记住，协调者会将子查询或CTE中的结果发送给需要进行处理的所有工作者。
 因此，最好是尽可能向内部查询添加最特定的过滤器和限制，或者聚合表。
@@ -81,9 +81,9 @@ Citus支持多租户用例中的所有SQL语句。即使在实时分析用例中
   -- this won't work
 
   SELECT repo_id, org->'id' as org_id, count(*)
-    OVER (PARTITION BY repo_id) -- repo_id is not distribution column
+    OVER(PARTITION BY repo_id) -- repo_id is not distribution column
     FROM github_events
-   WHERE repo_id IN (8514, 15435, 19438, 21692);
+   WHERE repo_id IN(8514, 15435, 19438, 21692);
 
 还有另外一个技巧。我们可以将相关信息作为临时表提供给协调者：
 
@@ -91,16 +91,16 @@ Citus支持多租户用例中的所有SQL语句。即使在实时分析用例中
 
   -- grab the data, minus the aggregate, into a local table
 
-  CREATE TEMP TABLE results AS (
+  CREATE TEMP TABLE results AS(
     SELECT repo_id, org->'id' as org_id
       FROM github_events
-     WHERE repo_id IN (8514, 15435, 19438, 21692)
+     WHERE repo_id IN(8514, 15435, 19438, 21692)
   );
 
   -- now run the aggregate locally
 
   SELECT repo_id, org_id, count(*)
-    OVER (PARTITION BY repo_id)
+    OVER(PARTITION BY repo_id)
     FROM results;
 
 在协调者上创建临时表是最后的手段。它受节点的磁盘大小和CPU的限制。

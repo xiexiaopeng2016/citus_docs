@@ -7,8 +7,8 @@ Citus表和视图
 --------------------
 
 Citus根据分布列将每个分布式表划分为多个逻辑分片。
-然后, 协调器维护元数据表，以跟踪统计信息和关于这些分片的健康状况和位置的信息。
-在本节中，我们将描述每个元数据表及其架构。登录到协调器节点后，您可以使用SQL查看和查询这些表。
+然后, 协调者维护元数据表，以跟踪统计信息和关于这些分片的健康状况和位置的信息。
+在本节中，我们将描述每个元数据表及其架构。登录到协调者节点后，您可以使用SQL查看和查询这些表。
 
 .. _partition_table:
 
@@ -23,7 +23,7 @@ pg_dist_partition表存储有关数据库中哪些表的分布的元数据。对
 | logicalrelid   |         regclass     | | 此行对应的分布式表。该值引用pg_class系统目录表中的relfilenode列。       |
 |                |                      | |                                                                         |
 +----------------+----------------------+---------------------------------------------------------------------------+
-|  partmethod    |         char         | | 用于分区/分发的方法。这个的价值对应不同分配方法的列是                   |
+|  partmethod    |         char         | | 用于分区/分发的方法。这个的值对应不同分配方法的列是                    |
 |                |                      | | append: 'a'                                                             |
 |                |                      | | hash: 'h'                                                               |
 |                |                      | | reference table: 'n'                                                    |
@@ -45,14 +45,14 @@ pg_dist_partition表存储有关数据库中哪些表的分布的元数据。对
      logicalrelid  | partmethod |                                                        partkey                                                         | colocationid | repmodel 
     ---------------+------------+------------------------------------------------------------------------------------------------------------------------+--------------+----------
      github_events | h          | {VAR :varno 1 :varattno 4 :vartype 20 :vartypmod -1 :varcollid 0 :varlevelsup 0 :varnoold 1 :varoattno 4 :location -1} |            2 | c
-     (1 row)
+    (1 row)
 
 .. _pg_dist_shard:
 
 分片表
 ~~~~~~~~~~~~~~~~~
 
-pg_dist_shard表存储有关表的各个分片的元数据。这包括有关该分片所属的分布式表的信息以及该分片的分步列的统计信息。对于追加分布式表，这些统计信息对应于分步列的最小值/最大值。在散列分布式表的情况下，它们是分配给该分片的散列令牌范围。这些统计信息用于在SELECT查询期间修剪不相关的分片。
+pg_dist_shard表存储有关表的各个分片的元数据。这包括有关该分片所属的分布式表的信息以及该分片的分布列的统计信息。对于追加分布式表，这些统计信息对应于分布列的最小值/最大值。在散列分布式表的情况下，它们是分配给该分片的散列令牌范围。这些统计信息用于在SELECT查询期间修剪不相关的分片。
 
 +----------------+----------------------+---------------------------------------------------------------------------+
 |      Name      |         Type         |       Description                                                         |
@@ -61,7 +61,7 @@ pg_dist_shard表存储有关表的各个分片的元数据。这包括有关该�
 +----------------+----------------------+---------------------------------------------------------------------------+
 |    shardid     |         bigint       | | 分配给此分片的全局唯一标识符。                                          |
 +----------------+----------------------+---------------------------------------------------------------------------+
-| shardstorage   |            char      | | 用于此分片的存储类型。不同的存储类型是在下表中讨论。                    |
+| shardstorage   |            char      | | 用于此分片的存储类型。不同的存储类型是在下表中讨论。                     |
 +----------------+----------------------+---------------------------------------------------------------------------+
 | shardminvalue  |            text      | | 对于附加分布式表，分布列的最小值在这个分片中（包括）                    |
 |                |                      | | 对于散列分布式表，分配给它的最小散列令牌值分片（包括）。                |
@@ -79,7 +79,7 @@ pg_dist_shard表存储有关表的各个分片的元数据。这包括有关该�
      github_events |  102027 | t            | 402653184     | 536870911
      github_events |  102028 | t            | 536870912     | 671088639
      github_events |  102029 | t            | 671088640     | 805306367
-     (4 rows)
+    (4 rows)
 
 
 分片存储类型
@@ -216,7 +216,7 @@ pg_dist_node表包含有关集群中工作节点的信息。
           1 |       1 | localhost |    12345 | default  | f           | t        | primary  | default
           2 |       2 | localhost |    12346 | default  | f           | t        | primary  | default
           3 |       3 | localhost |    12347 | default  | f           | t        | primary  | default
-    (3 rows)
+   (3 rows)
 
 .. _colocation_group_table:
 
@@ -243,7 +243,7 @@ pg_dist_colocation表包含有关哪些表的分片应放在一起或 :ref:`co-l
       colocationid | shardcount | replicationfactor | distributioncolumntype
      --------------+------------+-------------------+------------------------
                  2 |         32 |                 2 |                     20
-      (1 row)
+     (1 row)
 
 .. _citus_stat_statements:
 
@@ -280,7 +280,7 @@ Citus提供 ``citus_stat_statements`` 有关如何执行查询以及为谁执行
 .. code-block:: sql
 
   -- create and populate distributed table
-  create table foo ( id int );
+  create table foo( id int );
   select create_distributed_table('foo', 'id');
   insert into foo select generate_series(1,100);
 
@@ -315,7 +315,7 @@ Citus提供 ``citus_stat_statements`` 有关如何执行查询以及为谁执行
 分布式查询活动
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-使用Citus MX，用户可以从任何节点执行分布式查询。检查协调者上的标准Postgres `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ 视图将不包括那些工作者发起的查询。此外，查询可能会在工作节点上的某个分片上的行级锁上被阻塞。如果发生这种情况，那么这些查询将不会显示在Citus协调器者节点上的 `pg_locks <https://www.postgresql.org/docs/current/static/view-pg-locks.html>`_ 中。
+使用Citus MX，用户可以从任何节点执行分布式查询。检查协调者上的标准Postgres `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ 视图将不包括那些工作者发起的查询。此外，查询可能会在工作节点上的某个分片上的行级锁上被阻塞。如果发生这种情况，那么这些查询将不会显示在Citus协调者者节点上的 `pg_locks <https://www.postgresql.org/docs/current/static/view-pg-locks.html>`_ 中。
 
 Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内部使用的特定于分区的查询来构建分布式查询的结果。
 
@@ -323,7 +323,7 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
 * **citus_worker_stat_activity**: 显示工作者上的查询，包括针对各个分片的片段查询。
 * **citus_lock_waits**: 整个群集中的阻塞的查询。
 
-前两个视图包括 `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ 的所有列以及发起查询的工作者的主机主机/端口以及集群的协调器节点的主机/端口。
+前两个视图包括 `pg_stat_activity <https://www.postgresql.org/docs/current/static/monitoring-stats.html#PG-STAT-ACTIVITY-VIEW>`_ 的所有列以及发起查询的工作者的主机主机/端口以及集群的协调者节点的主机/端口。
 
 例如，考虑计算分布式表中的行：
 
@@ -399,7 +399,7 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
    state                  | idle in transaction
    backend_xid            |
    backend_xmin           |
-   query                  | COPY (SELECT count(*) AS count FROM users_table_102038 users_table WHERE true) TO STDOUT
+   query                  | COPY(SELECT count(*) AS count FROM users_table_102038 users_table WHERE true) TO STDOUT
    backend_type           | client backend
 
 该 ``query`` 字段显示从要计数的分片中复制的数据。
@@ -426,7 +426,7 @@ Citus提供了特殊的视图来监视整个集群中的查询和锁，包括内
    UPDATE numbers SET j = 2 WHERE i = 1;
                                           BEGIN;
                                           UPDATE numbers SET j = 3 WHERE i = 1;
-                                          -- (this blocks)
+                                          --(this blocks)
 
 该 ``citus_lock_waits`` 视图显示了这种情况。
 
@@ -489,7 +489,7 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
      nodeid | rolename | authinfo
     --------+----------+-----------------
         123 | jdoe     | password=abc123
-    (1 row)
+   (1 row)
 
 连接池凭据
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -516,10 +516,10 @@ Citus还有其他信息表和视图，可以在所有节点上访问，而不仅
 
 .. code-block:: sql
 
-   -- how to connect to node 1 (as identified in pg_dist_node)
+   -- how to connect to node 1(as identified in pg_dist_node)
 
-   INSERT INTO pg_dist_poolinfo (nodeid, poolinfo)
-        VALUES (1, 'host=127.0.0.1 port=5433');
+   INSERT INTO pg_dist_poolinfo(nodeid, poolinfo)
+        VALUES(1, 'host=127.0.0.1 port=5433');
 
 .. _worker_shards:
 

@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="76110228-12c9-4575-8fa6-f2325ad30cd8" name="Default Changelist" comment="翻译">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/develop/integrations.rst" beforeDir="false" afterPath="$PROJECT_DIR$/develop/integrations.rst" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -22,8 +21,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/develop/integrations.rst">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="319" lean-forward="true" selection-start-line="319" selection-end-line="319" />
+            <state relative-caret-position="260">
+              <caret line="319" selection-start-line="319" selection-end-line="319" />
             </state>
           </provider>
         </entry>
@@ -77,11 +76,11 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="65" />
-    <option name="y" value="506" />
+    <option name="y" value="505" />
     <option name="width" value="1855" />
-    <option name="height" value="584" />
+    <option name="height" value="585" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -145,7 +144,8 @@
       <workItem from="1559132850758" duration="12925000" />
       <workItem from="1559207395917" duration="29971000" />
       <workItem from="1559299150884" duration="52790000" />
-      <workItem from="1559463824573" duration="1248000" />
+      <workItem from="1559463824573" duration="1460000" />
+      <workItem from="1559524417500" duration="11000" />
     </task>
     <task id="LOCAL-00001" summary="翻译">
       <created>1559129406557</created>
@@ -245,11 +245,18 @@
       <option name="project" value="LOCAL" />
       <updated>1559442339178</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="翻译">
+      <created>1559465278476</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1559465278477</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="124701000" />
+    <option name="totallyTimeSpent" value="124924000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -261,9 +268,9 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="52" y="405" width="1484" height="467" extended-state="0" />
+    <frame x="55" y="-7" width="1488" height="878" extended-state="6" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.20967741" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2090909" />
       <window_info id="Structure" order="1" show_stripe_button="false" side_tool="true" weight="0.25" />
       <window_info id="Designer" order="2" />
       <window_info id="UI Designer" order="3" />
@@ -429,8 +436,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/develop/integrations.rst">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="319" lean-forward="true" selection-start-line="319" selection-end-line="319" />
+        <state relative-caret-position="260">
+          <caret line="319" selection-start-line="319" selection-end-line="319" />
         </state>
       </provider>
     </entry>

@@ -1,12 +1,12 @@
 .. _querying:
 
-查询分布式表（SQL）
+查询分布式表（SQL)
 =========================
 
 正如前面部分所讨论的，Citus是一个扩展，它扩展了最新的PostgreSQL以实现分布式执行。
 这意味着您可以在Citus协调者上使用标准的PostgreSQL `SELECT <http://www.postgresql.org/docs/current/static/sql-select.html>`_ 查询进行查询。
 然后，Citus将并行化涉及复杂选择，分组和排序以及JOIN的SELECT查询，以加快查询性能。
-在较高的层次上，Citus将SELECT查询分区为较小的查询片段，将这些查询片段分配给工作者节点，监督其执行，合并其结果（并在需要时对其进行排序），并将最终结果返回给用户。
+在较高的层次上，Citus将SELECT查询分区为较小的查询片段，将这些查询片段分配给工作者节点，监督其执行，合并其结果（并在需要时对其进行排序)，并将最终结果返回给用户。
 
 在以下部分中，我们将讨论可以使用Citus运行的不同类型的查询。
 
@@ -19,7 +19,7 @@ Citus支持和并行化PostgreSQL支持的大多数聚合函数。Citus的查询
 
 .. _count_distinct:
 
-Count (Distinct) 聚合
+Count(Distinct) 聚合
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Citus以多种方式支持count(distinct)聚合。如果count(distinct)聚合在分发列上，Citus可以直接将查询下推到工作者节点。如果没有，Citus会在每个工作者节点上运行select distinct语句，并将列表返回给协调者，在协调者中获取最终计数。
@@ -37,7 +37,7 @@ Citus以多种方式支持count(distinct)聚合。如果count(distinct)聚合在
 
 为了提高性能，您可以选择进行近似计数。请按照以下步骤操作：
 
-1. 在所有PostgreSQL实例（协调者和所有工作者）上下载并安装hll扩展。
+1. 在所有PostgreSQL实例（协调者和所有工作者)上下载并安装hll扩展。
 
    请访问PostgreSQL hll `github存储库 <https://github.com/citusdata/postgresql-hll>`_ 以获取有关获取扩展的详细信息。
 
@@ -58,7 +58,7 @@ Citus以多种方式支持count(distinct)聚合。如果count(distinct)聚合在
 HyperLogLog列
 $$$$$$$$$$$$$
 
-某些用户已将其数据存储为HLL列。在这种情况下，他们可以通过调用hll_union_agg（hll_column）动态地汇总这些数据。
+某些用户已将其数据存储为HLL列。在这种情况下，他们可以通过调用hll_union_agg（hll_column)动态地汇总这些数据。
 
 .. _topn:
 
@@ -111,7 +111,7 @@ Postgres的开源 `TopN 扩展 <https://github.com/citusdata/postgresql-topn>`_ 
 .. code-block:: psql
 
   CREATE TABLE customer_reviews
-  (
+(
       customer_id TEXT,
       review_date DATE,
       review_rating INTEGER,
@@ -140,7 +140,7 @@ Postgres的开源 `TopN 扩展 <https://github.com/citusdata/postgresql-topn>`_ 
 
   -- a table to materialize the daily aggregate
   CREATE TABLE reviews_by_day
-  (
+(
     review_date date unique,
     agg_data jsonb
   );
@@ -157,7 +157,7 @@ Postgres的开源 `TopN 扩展 <https://github.com/citusdata/postgresql-topn>`_ 
 
 .. code-block:: postgres
 
-  SELECT review_date, (topn(agg_data, 1)).*
+  SELECT review_date,(topn(agg_data, 1)).*
   FROM reviews_by_day
   ORDER BY review_date
   LIMIT 5;
@@ -179,7 +179,7 @@ TopN创建的json字段可以与 ``topn_union`` 和 ``topn_union_agg`` 合并。
 
 .. code-block:: postgres
 
-  SELECT (topn(topn_union_agg(agg_data), 5)).*
+  SELECT(topn(topn_union_agg(agg_data), 5)).*
   FROM reviews_by_day
   WHERE review_date >= '2000-01-01' AND review_date < '2000-02-01'
   ORDER BY 2 DESC;
@@ -218,7 +218,7 @@ Citus还尽可能地将limit子句下放到工作者节点的分片上，以最�
 
 Citus支持分布式表的所有视图。有关视图语法和功能的概述，请参阅 `CREATE VIEW <https://www.postgresql.org/docs/current/static/sql-createview.html>`_ 的PostgreSQL文档。
 
-请注意，某些视图导致查询计划效率低于其他视图。有关检测和改善较差视图性能的更多信息，请参阅 :ref:`subquery_perf`。（视图在内部被视为子查询。）
+请注意，某些视图导致查询计划效率低于其他视图。有关检测和改善较差视图性能的更多信息，请参阅 :ref:`subquery_perf`。（视图在内部被视为子查询。)
 
 Citus也支持物化视图，并将它们作为本地表存储在协调者节点上。在实现之后在分布式查询中使用它们需要将它们包装在子查询中，这是一种在 :ref:`join_local_dist` 中描述的技术。
 
@@ -238,7 +238,7 @@ Co-located joins
 
 .. note::
 
-  确保将表分布到相同数量的分片中，并确保每个表的分发列具有完全匹配的类型。尝试连接稍微不同类型的列（如int和bigint）可能会导致问题。
+  确保将表分布到相同数量的分片中，并确保每个表的分发列具有完全匹配的类型。尝试连接稍微不同类型的列（如int和bigint)可能会导致问题。
 
 引用表连接
 ~~~~~~~~~~

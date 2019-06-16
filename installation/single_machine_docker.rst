@@ -1,26 +1,21 @@
 .. _single_machine_docker:
 
-Docker (Mac or Linux)
-=====================
+Docker (Mac 或 Linux)
+===========================
 
-This section describes setting up a Citus cluster on a single machine using docker-compose.
+本节介绍如何使用docker-compose在单台计算机上设置Citus群集。
 
 .. note::
-   **The Docker image is intended for development/testing purposes only**, and
-   has not been prepared for production use. The images use default connection
-   settings, which are very permissive, and not suitable for any kind of
-   production setup. These should be updated before using the image for
-   production use. The PostgreSQL manual `explains how <http://www.postgresql.org/docs/current/static/auth-pg-hba-conf.html>`_ to
-   make them more restrictive.
+   **Docker镜像仅用于开发/测试** ，尚未准备用于生产用途。镜像使用默认连接设置，这是非常宽松的，不适合任何类型的生产设置。在将镜像用于生产之前，应该更新这些内容。PostgreSQL手册 `解释了如何 <http://www.postgresql.org/docs/current/static/auth-pg-hba-conf.html>`_ 使它们更具限制性。
 
-**1. Install Docker Community Edition and Docker Compose**
+**1. 安装 Docker 社区版和 Docker Compose**
 
-*On Mac:*
+*在Mac上:*
 
-* Install `Docker <https://www.docker.com/community-edition#/download>`_.
-* Start Docker by clicking on the application's icon.
+* 安装 `Docker <https://www.docker.com/community-edition#/download>`_.
+* 单击应用程序的图标启动Docker。
 
-*On Linux:*
+*在Linux上:*
 
 .. code-block:: bash
 
@@ -31,58 +26,58 @@ This section describes setting up a Citus cluster on a single machine using dock
   sudo curl -sSL https://github.com/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
 
-The above version of Docker Compose is sufficient for running Citus, or you can install the `latest version <https://github.com/docker/compose/releases/latest>`_.
+以上版本的Docker Compose足以运行Citus，或者您可以安装 `latest version <https://github.com/docker/compose/releases/latest>`_。
 
 .. _post_install:
 
-**2. Start the Citus Cluster**
+**2. 启动Citus群集**
 
-Citus uses Docker Compose to run and connect containers holding the database coordinator node, workers, and a persistent data volume. To create a local cluster download our Docker Compose configuration file and run it
+Citus使用Docker Compose来运行和连接容纳数据库协调者节点，工作者和持久数据卷的容器。要创建本地群集，请下载我们的Docker Compose配置文件并运行它
 
 .. code-block:: bash
 
   curl -L https://raw.githubusercontent.com/citusdata/docker/master/docker-compose.yml > docker-compose.yml
   COMPOSE_PROJECT_NAME=citus docker-compose up -d
 
-The first time you start the cluster it builds its containers. Subsequent startups take a matter of seconds.
+第一次启动集群时，它会构建其容器。后续启动只需几秒钟。
 
 .. note::
 
-  If you already have PostgreSQL running on your machine you may encounter this error when starting the Docker containers:
+  如果您已在计算机上运行PostgreSQL，则在启动Docker容器时可能会遇到此错误：
 
   .. code::
 
     Error starting userland proxy:
     Bind for 0.0.0.0:5432: unexpected error address already in use
 
-  This is because the "master" (coordinator) service attempts to bind to the standard PostgreSQL port 5432. Simply choose a different port for coordinator service with the ``MASTER_EXTERNAL_PORT`` environment variable. For example:
+  这是因为"master"(协调者)服务尝试绑定到标准PostgreSQL端口5432。只需为 ``MASTER_EXTERNAL_PORT`` 环境变量选择一个不同的协调者服务端口。例如：
 
   .. code::
 
     MASTER_EXTERNAL_PORT=5433 COMPOSE_PROJECT_NAME=citus docker-compose up -d
 
 
-**3. Verify that installation has succeeded**
+**3. 验证安装是否成功**
 
-To verify that the installation has succeeded we check that the coordinator node has picked up the desired worker configuration. First start the psql shell on the coordinator (master) node:
+要验证安装是否成功，我们检查协调者节点是否已选择所需的工作者配置。首先在协调者(master)节点上启动psql shell：
 
 .. code-block:: bash
 
   docker exec -it citus_master psql -U postgres
 
-Then run this query:
+然后运行此查询：
 
 .. code-block:: postgresql
 
   SELECT * FROM master_get_active_worker_nodes();
 
-You should see a row for each worker node including the node name and port.
+您应该看到每个工作节点的一行，包括节点名称和端口。
 
-Once you have the cluster up and running, you can visit our tutorials on :ref:`multi-tenant applications <multi_tenant_tutorial>` or :ref:`real-time analytics <real_time_analytics_tutorial>` to get started with Citus in minutes.
+启动并运行群集后，您可以访问我们的 :ref:`多租户应用程序 <multi_tenant_tutorial>` 或 :ref:`实时分析 <real_time_analytics_tutorial>` 教程，以便在几分钟内开始使用Citus。
 
-**4. Shut down the cluster when ready**
+**4. 准备好后关闭群集**
 
-When you wish to stop the docker containers, use Docker Compose:
+如果要停止docker容器，请使用Docker Compose：
 
 .. code-block:: bash
 
@@ -90,4 +85,4 @@ When you wish to stop the docker containers, use Docker Compose:
 
 .. note::
 
-  Please note that Citus reports anonymous information about your cluster to the Citus Data company servers. To learn more about what information is collected and how to opt out of it, see :ref:`phone_home`.
+  请注意，Citus会向Citus Data公司服务器报告有关您的群集的匿名信息。要了解有关收集哪些信息以及如何选择退出信息的详细信息，请参阅 :ref:`phone_home`。

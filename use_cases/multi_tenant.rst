@@ -2,7 +2,7 @@
 
 .. _mt_use_case:
 
-Multi-tenant Applications
+多租户应用程序
 =========================
 
 .. contents::

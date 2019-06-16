@@ -1,9 +1,9 @@
 .. _development:
 
-Single-Machine Cluster
+单机群集
 ----------------------
 
-If you are a developer looking to try Citus out on your machine, the guides below will help you get started quickly.
+如果您是一个想要在机器上试用Citus的开发人员，下面的指南将帮助您快速入门。
 
 .. toctree::
 

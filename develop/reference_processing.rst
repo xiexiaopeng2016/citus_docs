@@ -81,7 +81,7 @@ Citus有三种基本的执行器类型：实时，路由器和任务跟踪器。
 
   SELECT page_id, count(distinct session_id)
   FROM visits
-  WHERE page_id IN (
+  WHERE page_id IN(
     SELECT page_id
     FROM visits
     GROUP BY page_id
@@ -96,56 +96,56 @@ Citus有三种基本的执行器类型：实时，路由器和任务跟踪器。
 
 ::
 
-  GroupAggregate  (cost=0.00..0.00 rows=0 width=0)
+  GroupAggregate (cost=0.00..0.00 rows=0 width=0)
     Group Key: remote_scan.page_id
-    ->  Sort  (cost=0.00..0.00 rows=0 width=0)
+    ->  Sort (cost=0.00..0.00 rows=0 width=0)
       Sort Key: remote_scan.page_id
-      ->  Custom Scan (Citus Real-Time)  (cost=0.00..0.00 rows=0 width=0)
+      ->  Custom Scan(Citus Real-Time) (cost=0.00..0.00 rows=0 width=0)
         ->  Distributed Subplan 6_1
-          ->  Limit  (cost=0.00..0.00 rows=0 width=0)
-            ->  Sort  (cost=0.00..0.00 rows=0 width=0)
+          ->  Limit (cost=0.00..0.00 rows=0 width=0)
+            ->  Sort (cost=0.00..0.00 rows=0 width=0)
               Sort Key: COALESCE((pg_catalog.sum((COALESCE((pg_catalog.sum(remote_scan.worker_column_2))::bigint, '0'::bigint))))::bigint, '0'::bigint) DESC
-              ->  HashAggregate  (cost=0.00..0.00 rows=0 width=0)
+              ->  HashAggregate (cost=0.00..0.00 rows=0 width=0)
                 Group Key: remote_scan.page_id
-                ->  Custom Scan (Citus Real-Time)  (cost=0.00..0.00 rows=0 width=0)
+                ->  Custom Scan(Citus Real-Time) (cost=0.00..0.00 rows=0 width=0)
                   Task Count: 32
                   Tasks Shown: One of 32
                   ->  Task
                     Node: host=localhost port=5433 dbname=postgres
-                    ->  Limit  (cost=1883.00..1883.05 rows=20 width=12)
-                      ->  Sort  (cost=1883.00..1965.54 rows=33017 width=12)
-                        Sort Key: (count(*)) DESC
-                        ->  HashAggregate  (cost=674.25..1004.42 rows=33017 width=12)
+                    ->  Limit (cost=1883.00..1883.05 rows=20 width=12)
+                      ->  Sort (cost=1883.00..1965.54 rows=33017 width=12)
+                        Sort Key:(count(*)) DESC
+                        ->  HashAggregate (cost=674.25..1004.42 rows=33017 width=12)
                           Group Key: page_id
-                          ->  Seq Scan on visits_102264 visits  (cost=0.00..509.17 rows=33017 width=4)
+                          ->  Seq Scan on visits_102264 visits (cost=0.00..509.17 rows=33017 width=4)
         Task Count: 32
         Tasks Shown: One of 32
         ->  Task
           Node: host=localhost port=5433 dbname=postgres
-          ->  HashAggregate  (cost=734.53..899.61 rows=16508 width=8)
+          ->  HashAggregate (cost=734.53..899.61 rows=16508 width=8)
             Group Key: visits.page_id, visits.session_id
-            ->  Hash Join  (cost=17.00..651.99 rows=16508 width=8)
-              Hash Cond: (visits.page_id = intermediate_result.page_id)
-              ->  Seq Scan on visits_102264 visits  (cost=0.00..509.17 rows=33017 width=8)
-              ->  Hash  (cost=14.50..14.50 rows=200 width=4)
-                ->  HashAggregate  (cost=12.50..14.50 rows=200 width=4)
+            ->  Hash Join (cost=17.00..651.99 rows=16508 width=8)
+              Hash Cond:(visits.page_id = intermediate_result.page_id)
+              ->  Seq Scan on visits_102264 visits (cost=0.00..509.17 rows=33017 width=8)
+              ->  Hash (cost=14.50..14.50 rows=200 width=4)
+                ->  HashAggregate (cost=12.50..14.50 rows=200 width=4)
                   Group Key: intermediate_result.page_id
-                  ->  Function Scan on read_intermediate_result intermediate_result  (cost=0.00..10.00 rows=1000 width=4)
+                  ->  Function Scan on read_intermediate_result intermediate_result (cost=0.00..10.00 rows=1000 width=4)
 
 让我们把它拆开，并检查每一块。
 
 ::
 
-  GroupAggregate  (cost=0.00..0.00 rows=0 width=0)
+  GroupAggregate (cost=0.00..0.00 rows=0 width=0)
     Group Key: remote_scan.page_id
-    ->  Sort  (cost=0.00..0.00 rows=0 width=0)
+    ->  Sort (cost=0.00..0.00 rows=0 width=0)
       Sort Key: remote_scan.page_id
 
 树的根是协调者对工作者节点的结果所做的。在这种情况下，它将它们分组，GroupAggregate要求首先对它们进行排序。
 
 ::
 
-      ->  Custom Scan (Citus Real-Time)  (cost=0.00..0.00 rows=0 width=0)
+      ->  Custom Scan(Citus Real-Time) (cost=0.00..0.00 rows=0 width=0)
         ->  Distributed Subplan 6_1
   .
 
@@ -153,25 +153,25 @@ Citus有三种基本的执行器类型：实时，路由器和任务跟踪器。
 
 ::
 
-          ->  Limit  (cost=0.00..0.00 rows=0 width=0)
-            ->  Sort  (cost=0.00..0.00 rows=0 width=0)
+          ->  Limit (cost=0.00..0.00 rows=0 width=0)
+            ->  Sort (cost=0.00..0.00 rows=0 width=0)
               Sort Key: COALESCE((pg_catalog.sum((COALESCE((pg_catalog.sum(remote_scan.worker_column_2))::bigint, '0'::bigint))))::bigint, '0'::bigint) DESC
-              ->  HashAggregate  (cost=0.00..0.00 rows=0 width=0)
+              ->  HashAggregate (cost=0.00..0.00 rows=0 width=0)
                 Group Key: remote_scan.page_id
-                ->  Custom Scan (Citus Real-Time)  (cost=0.00..0.00 rows=0 width=0)
+                ->  Custom Scan(Citus Real-Time) (cost=0.00..0.00 rows=0 width=0)
                   Task Count: 32
                   Tasks Shown: One of 32
                   ->  Task
                     Node: host=localhost port=5433 dbname=postgres
-                    ->  Limit  (cost=1883.00..1883.05 rows=20 width=12)
-                      ->  Sort  (cost=1883.00..1965.54 rows=33017 width=12)
-                        Sort Key: (count(*)) DESC
-                        ->  HashAggregate  (cost=674.25..1004.42 rows=33017 width=12)
+                    ->  Limit (cost=1883.00..1883.05 rows=20 width=12)
+                      ->  Sort (cost=1883.00..1965.54 rows=33017 width=12)
+                        Sort Key:(count(*)) DESC
+                        ->  HashAggregate (cost=674.25..1004.42 rows=33017 width=12)
                           Group Key: page_id
-                          ->  Seq Scan on visits_102264 visits  (cost=0.00..509.17 rows=33017 width=4)
+                          ->  Seq Scan on visits_102264 visits (cost=0.00..509.17 rows=33017 width=4)
   .
 
-工作者节点为32个分片中的每一个运行上面的内容（Citus选择一个代表进行显示）。我们可以识别 ``IN (…)`` 子查询的所有部分：排序，分组和限制。当所有工作者完成此查询后，他们将其输出发送回协调者，协调者将其作为“中间结果”放在一起。
+工作者节点为32个分片中的每一个运行上面的内容（Citus选择一个代表进行显示)。我们可以识别 ``IN(…)`` 子查询的所有部分：排序，分组和限制。当所有工作者完成此查询后，他们将其输出发送回协调者，协调者将其作为“中间结果”放在一起。
 
 ::
 
@@ -179,21 +179,21 @@ Citus有三种基本的执行器类型：实时，路由器和任务跟踪器。
         Tasks Shown: One of 32
         ->  Task
           Node: host=localhost port=5433 dbname=postgres
-          ->  HashAggregate  (cost=734.53..899.61 rows=16508 width=8)
+          ->  HashAggregate (cost=734.53..899.61 rows=16508 width=8)
             Group Key: visits.page_id, visits.session_id
-            ->  Hash Join  (cost=17.00..651.99 rows=16508 width=8)
-              Hash Cond: (visits.page_id = intermediate_result.page_id)
+            ->  Hash Join (cost=17.00..651.99 rows=16508 width=8)
+              Hash Cond:(visits.page_id = intermediate_result.page_id)
   .
 
 Citus在第二个子树中开始另一个实时工作。它将计算访问中的不同会话。它使用JOIN连接中间结果。中间结果将帮助它限制在前20页。
 
 ::
 
-              ->  Seq Scan on visits_102264 visits  (cost=0.00..509.17 rows=33017 width=8)
-              ->  Hash  (cost=14.50..14.50 rows=200 width=4)
-                ->  HashAggregate  (cost=12.50..14.50 rows=200 width=4)
+              ->  Seq Scan on visits_102264 visits (cost=0.00..509.17 rows=33017 width=8)
+              ->  Hash (cost=14.50..14.50 rows=200 width=4)
+                ->  HashAggregate (cost=12.50..14.50 rows=200 width=4)
                   Group Key: intermediate_result.page_id
-                  ->  Function Scan on read_intermediate_result intermediate_result  (cost=0.00..10.00 rows=1000 width=4)
+                  ->  Function Scan on read_intermediate_result intermediate_result (cost=0.00..10.00 rows=1000 width=4)
   .
 
 工作者使用一个 ``read_intermediate_result`` 函数在内部检索中间结果，该函数从协调者节点复制的文件中加载数据。

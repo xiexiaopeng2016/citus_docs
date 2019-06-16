@@ -2,37 +2,23 @@
 
 .. _rt_use_case:
 
-Real-Time Dashboards
+实时仪表盘
 ====================
 
-Citus provides real-time queries over large datasets. One workload we commonly see at
-Citus involves powering real-time dashboards of event data.
+Citus提供大型数据集的实时查询。我们在Citus常见的一项工作负载涉及为事件数据的实时仪表板提供驱动。
 
-For example, you could be a cloud services provider helping other businesses monitor their
-HTTP traffic. Every time one of your clients receives an HTTP request your service
-receives a log record. You want to ingest all those records and create an HTTP analytics
-dashboard which gives your clients insights such as the number HTTP errors their sites
-served. It's important that this data shows up with as little latency as possible so your
-clients can fix problems with their sites. It's also important for the dashboard to show
-graphs of historical trends.
+例如，您有可能成为云服务提供商，帮助其他企业监控其HTTP流量。每当您的一个客户端收到HTTP请求时，您的服务就会收到一条日志记录。您希望获取所有这些记录并创建HTTP分析仪表板，为您的客户提供洞察，例如其网站所服务的HTTP错误数量。重要的是，此数据显示尽可能少的延迟，以便您的客户可以修复其网站的问题。仪表板显示历史趋势图也很重要。
 
-Alternatively, maybe you're building an advertising network and want to show clients
-clickthrough rates on their campaigns. In this example latency is also critical, raw data
-volume is also high, and both historical and live data are important.
+或者，也许您正在建立一个广告网络，并希望在其广告系列中向客户展示点击率。在此示例中，延迟也很关键，原始数据量也很高，历史数据和实时数据都很重要。
 
-In this section we'll demonstrate how to build part of the first example, but this
-architecture would work equally well for the second and many other use-cases.
+在本节中，我们将演示如何构建第一个示例的一部分，但是对于第二个用例和许多其他用例，这个体系结构同样可以很好地工作。
 
-Data Model
+数据模型
 ----------
 
-The data we're dealing with is an immutable stream of log data. We'll insert directly into
-Citus but it's also common for this data to first be routed through something like Kafka.
-Doing so has the usual advantages, and makes it easier to pre-aggregate the data once data
-volumes become unmanageably high.
+我们正在处理的数据是不可变的日志数据流。我们将直接插入Citus，但这些数据首先通过像Kafka这样的路由进行路由也很常见。这样做具有通常的优势，并且一旦数据量变得难以管理地高，就可以更容易地预聚合数据。
 
-We'll use a simple schema for ingesting HTTP event data. This schema serves as an example
-to demonstrate the overall architecture; a real system might use additional columns.
+我们将使用一个简单的模式来摄取HTTP事件数据。以该模式为例，演示了整个体系结构;一个实际的系统可能会使用额外的列。
 
 .. code-block:: sql
 
@@ -52,20 +38,16 @@ to demonstrate the overall architecture; a real system might use additional colu
 
   SELECT create_distributed_table('http_request', 'site_id');
 
-When we call :ref:`create_distributed_table <create_distributed_table>`
-we ask Citus to hash-distribute ``http_request`` using the ``site_id`` column. That means
-all the data for a particular site will live in the same shard.
+当我们调用 :ref:`create_distributed_table <create_distributed_table>` 时，
+我们要求Citus使用 ``site_id`` 列散列分发 ``http_request``。这意味着特定站点的所有数据都将存在于同一个分片中。
 
-The UDF uses the default configuration values for shard count. We
-recommend :ref:`using 2-4x as many shards <faq_choose_shard_count>` as
-CPU cores in your cluster. Using this many shards lets you rebalance
-data across your cluster after adding new worker nodes.
+UDF使用分片数目的默认配置值。我们建议在群集中 :ref:`使用2-4倍的分片 <faq_choose_shard_count>` 作为CPU核心。使用这么多分片可以在添加新的工作节点后重新平衡群集中的数据。
 
 .. NOTE::
 
-  Citus Cloud uses `streaming replication <https://www.postgresql.org/docs/current/static/warm-standby.html>`_ to achieve high availability and thus maintaining shard replicas would be redundant. In any production environment where streaming replication is unavailable, you should set ``citus.shard_replication_factor`` to 2 or higher for fault tolerance.
+  Citus Cloud使用 `流复制 <https://www.postgresql.org/docs/current/static/warm-standby.html>`_ 来实现高可用性，因此维护分片副本将是多余的。在流复制不可用的任何生产环境中，都应该设置 ``citus.shard_replication_factor`` 为2或更高，用于容错。
 
-With this, the system is ready to accept data and serve queries! Keep the following loop running in a ``psql`` console in the background while you continue with the other commands in this article. It generates fake data every second or two.
+有了这个，系统就可以接受数据并提供查询了！在您继续使用本文中的其他命令时，请在后台的 ``psql`` 控制台中运行以下循环。它每隔一两秒生成一次假数据。
 
 .. code-block:: postgres
 
@@ -92,7 +74,7 @@ With this, the system is ready to accept data and serve queries! Keep the follow
     END LOOP;
   END $$;
 
-Once you're ingesting data, you can run dashboard queries such as:
+一旦您摄入数据，您可以运行仪表板查询，例如：
 
 .. code-block:: sql
 
@@ -108,24 +90,15 @@ Once you're ingesting data, you can run dashboard queries such as:
   GROUP BY site_id, minute
   ORDER BY minute ASC;
 
-The setup described above works, but has two drawbacks:
+上述设置可以工作，但有两个缺点:
 
-* Your HTTP analytics dashboard must go over each row every time it needs to generate a
-  graph. For example, if your clients are interested in trends over the past year, your
-  queries will aggregate every row for the past year from scratch.
-* Your storage costs will grow proportionally with the ingest rate and the length of the
-  queryable history. In practice, you may want to keep raw events for a shorter period of
-  time (one month) and look at historical graphs over a longer time period (years).
+* 每次需要生成图表时，您的HTTP分析仪表板都必须遍历每一行。例如，如果您的客户对过去一年的趋势感兴趣，那么您的查询将从头开始汇总过去一年的每一行。
+* 您的存储成本将与摄取率和可查询历史记录的长度成比例增长。在实践中，您可能希望将原始事件保留较短的时间段(一个月)，并查看较长时间段(年)的历史图表。
 
-Rollups
+汇总
 -------
 
-You can overcome both drawbacks by rolling up the raw data into a pre-aggregated form.
-Here, we'll aggregate the raw data into a table which stores summaries of 1-minute
-intervals. In a production system, you would probably also want something like 1-hour and
-1-day intervals, these each correspond to zoom-levels in the dashboard. When the user
-wants request times for the last month the dashboard can simply read and chart the values
-for each of the last 30 days.
+您可以通过将原始数据汇总到预先聚合的表单来克服这两个缺点。在这里，我们将原始数据聚合到一个表中，该表存储1分钟间隔的摘要。在生产系统中，您可能还需要1小时和1天的间隔，这些间隔对应于仪表板中的缩放级别。当用户需要上个月的请求时间时，仪表板可以简单地读取并绘制最近30天的每个值。
 
 .. code-block:: sql
 
@@ -145,19 +118,13 @@ for each of the last 30 days.
 
   CREATE INDEX http_request_1min_idx ON http_request_1min (site_id, ingest_time);
 
-This looks a lot like the previous code block. Most importantly: It also shards on
-``site_id`` and uses the same default configuration for shard count and
-replication factor. Because all three of those match, there's a 1-to-1
-correspondence between ``http_request`` shards and ``http_request_1min`` shards,
-and Citus will place matching shards on the same worker. This is called
-:ref:`co-location <colocation>`; it makes queries such as joins faster and our rollups possible.
+这看起来很像以前的代码块。最重要的是：它也是在 ``site_id`` 分片, 并为分片数目和复制因子使用相同的默认配置。因为这三个都匹配，所以在 ``http_request`` 分片和 ``http_request_1min`` 分片之间存在1对1的通信，Citus将把匹配的分片放在同一个工作者上。这称为 :ref:`共址 <colocation>`; 它使连接等查询更快，并使汇总成为可能。
 
 .. image:: /images/colocation.png
   :alt: co-location in citus
 
-In order to populate ``http_request_1min`` we're going to periodically run
-an INSERT INTO SELECT. This is possible because the tables are co-located.
-The following function wraps the rollup query up for convenience.
+
+为了填充 ``http_request_1min``, 我们将定期运行INSERT INTO SELECT。这是可能的，因为表位于同一位置。以下函数为方便起见包装了汇总查询。
 
 .. code-block:: plpgsql
 
@@ -202,17 +169,15 @@ The following function wraps the rollup query up for convenience.
 
 .. note::
 
-  The above function should be called every minute. You could do this by
-  adding a crontab entry on the coordinator node:
+  应该每分钟调用上述函数。您可以通过在协调节点上添加定时任务来执行此操作：
 
   .. code-block:: bash
 
     * * * * * psql -c 'SELECT rollup_http_request();'
 
-  Alternately, an extension such as `pg_cron <https://github.com/citusdata/pg_cron>`_
-  allows you to schedule recurring queries directly from the database.
+  或者，诸如 `pg_cron <https://github.com/citusdata/pg_cron>`_ 之类的扩展允许您直接从数据库安排循环查询。
 
-The dashboard query from earlier is now a lot nicer:
+之前的仪表板查询现在好多了：
 
 .. code-block:: sql
 
@@ -221,55 +186,36 @@ The dashboard query from earlier is now a lot nicer:
     FROM http_request_1min
    WHERE ingest_time > date_trunc('minute', now()) - '5 minutes'::interval;
 
-Expiring Old Data
+过期旧数据
 -----------------
 
-The rollups make queries faster, but we still need to expire old data to avoid unbounded
-storage costs. Simply decide how long you'd like to keep data for each granularity, and use standard queries to delete expired data. In the following example, we decided to
-keep raw data for one day, and per-minute aggregations for one month:
+汇总使查询更快，但我们仍需要使旧数据过期以避免无限的存储成本。只需确定您希望为每个粒度保留数据的时间长度，并使用标准查询来删除过期数据。在以下示例中，我们决定将原始数据保留一天，每分钟的聚合保留一个月:
 
 .. code-block:: plpgsql
 
   DELETE FROM http_request WHERE ingest_time < now() - interval '1 day';
   DELETE FROM http_request_1min WHERE ingest_time < now() - interval '1 month';
 
-In production you could wrap these queries in a function and call it every minute in a cron job.
+在生产中，您可以将这些查询包装在一个函数中，并在定时任务中每分钟调用一次。
 
-Data expiration can go even faster by using table range partitioning on top of Citus hash distribution. See the :ref:`timeseries` section for a detailed example.
+通过在Citus散列分布之上使用表范围分区，数据到期可以更快。请参阅 :ref:`timeseries` 部分的详细示例。
 
-Those are the basics! We provided an architecture that ingests HTTP events and
-then rolls up these events into their pre-aggregated form. This way, you can both store
-raw events and also power your analytical dashboards with subsecond queries.
+这些都是基础！我们提供了一个体系结构，用于摄入HTTP事件，然后将这些事件汇总到预先聚合的表单中。这样，您既可以存储原始事件，也可以使用亚秒级查询为分析仪表板提供驱动。
 
+接下来的部分将扩展到基本体系结构，并向您展示如何解决经常出现的问题。
 
-The next sections extend upon the basic architecture and show you how to resolve questions
-which often appear.
-
-
-Approximate Distinct Counts
+近似的不同计数
 ---------------------------
 
-A common question in HTTP analytics deals with :ref:`approximate distinct counts
-<count_distinct>`: How many unique visitors visited your site over the last month?
-Answering this question *exactly* requires storing the list of all previously-seen visitors
-in the rollup tables, a prohibitively large amount of data. However an approximate answer
-is much more manageable.
+HTTP分析中的一个常见问题是处理 :ref:`近似的不同计数 <count_distinct>`：上个月访问过您网站的唯一身份访问者数量是多少？*精确地* 回答这个问题需要在汇总表中存储所有以前看过的访问者的列表，这是一个非常大量的数据。然而，一个近似的答案更易于管理。
 
-A datatype called hyperloglog, or HLL, can answer the query
-approximately; it takes a surprisingly small amount of space to tell you
-approximately how many unique elements are in a set. Its accuracy can be
-adjusted. We'll use ones which, using only 1280 bytes, will be able to
-count up to tens of billions of unique visitors with at most 2.2% error.
+称为hyperloglog或HLL的数据类型可以近似回答查询;
+它需要非常小的空间来告诉您一个集合中大约有多少个惟一的元素。
+它需要一个惊人的小空间来告诉你大约有多少独特元素在一组中。它的准确度可以调整。我们将使用它, 仅使用1280字节的数据，最多可以计算数百亿的唯一身份访问者，最多只有2.2％的误差。
 
-An equivalent problem appears if you want to run a global query, such as the number of
-unique IP addresses which visited any of your client's sites over the last month. Without
-HLLs this query involves shipping lists of IP addresses from the workers to the coordinator for
-it to deduplicate. That's both a lot of network traffic and a lot of computation. By using
-HLLs you can greatly improve query speed.
+如果要运行全局查询，则会出现等效问题，例如上个月访问过任何客户端站点的唯一IP地址数。如果没有HLL，此查询涉及将工作人员的IP地址列表发送给协调员，以便进行重复数据删除。这既是大量的网络流量，也是大量的计算。通过使用HLL，您可以大大提高查询速度。
 
-First you must install the HLL extension; `the github repo
-<https://github.com/citusdata/postgresql-hll>`_ has instructions. Next, you have
-to enable it:
+首先，您必须安装HLL扩展; `github repo <https://github.com/citusdata/postgresql-hll>`_ 有说明。接下来，您需要启用它：
 
 .. code-block:: sql
 
@@ -280,18 +226,15 @@ to enable it:
 
 .. note::
 
-  This is not necessary on Citus Cloud, which has HLL already installed,
-  along with other useful :ref:`cloud_extensions`.
+  这在Citus Cloud上是不必要的，它已经安装了HLL，以及其他有用的 :ref:`cloud_extensions`。
 
-Now we're ready to track IP addresses in our rollup with HLL. First
-add a column to the rollup table.
+现在，我们已准备好使用HLL跟踪汇总中的IP地址。首先在汇总表中添加一列。
 
 .. code-block:: sql
 
   ALTER TABLE http_request_1min ADD COLUMN distinct_ip_addresses hll;
 
-Next use our custom aggregation to populate the column. Just add it
-to the query in our rollup function:
+接下来使用我们的自定义聚合来填充列。只需将它添加到我们的汇总函数的查询中：
 
 .. code-block:: diff
 
@@ -310,8 +253,7 @@ to the query in our rollup function:
   +   hll_add_agg(hll_hash_text(ip_address)) AS distinct_ip_addresses
     FROM http_request
 
-Dashboard queries are a little more complicated, you have to read out the distinct
-number of IP addresses by calling the ``hll_cardinality`` function:
+仪表板查询稍微复杂一点，您必须通过调用 ``hll_cardinality`` 函数读出不同数量的IP地址：
 
 .. code-block:: sql
 
@@ -321,12 +263,9 @@ number of IP addresses by calling the ``hll_cardinality`` function:
     FROM http_request_1min
    WHERE ingest_time > date_trunc('minute', now()) - interval '5 minutes';
 
-HLLs aren't just faster, they let you do things you couldn't previously. Say we did our
-rollups, but instead of using HLLs we saved the exact unique counts. This works fine, but
-you can't answer queries such as "how many distinct sessions were there during this
-one-week period in the past we've thrown away the raw data for?".
+HLL不仅速度更快，而且可以让您做以前无法做到的事情。假设我们完成了汇总，但我们没有使用HLL，而是保存了确切的唯一计数。这样可以正常工作，但您无法回答诸如“在过去一周内我们丢弃原始数据的过程中有多少个不同的会话？”。
 
-With HLLs, this is easy. You can compute distinct IP counts over a time period with the following query:
+使用HLL，这很容易。您可以使用以下查询计算一段时间内的不同IP计数：
 
 .. code-block:: sql
 
@@ -334,28 +273,22 @@ With HLLs, this is easy. You can compute distinct IP counts over a time period w
   FROM http_request_1min
   WHERE ingest_time > date_trunc('minute', now()) - '5 minutes'::interval;
 
-You can find more information on HLLs `in the project's GitHub repository
-<https://github.com/aggregateknowledge/postgresql-hll>`_.
+您可以 `在项目的GitHub存储库 <https://github.com/aggregateknowledge/postgresql-hll>`_ 中找到有关HLL的更多信息。
 
-Unstructured Data with JSONB
+使用JSONB的非结构化数据
 ----------------------------
 
-Citus works well with Postgres' built-in support for unstructured data types. To
-demonstrate this, let's keep track of the number of visitors which came from each country.
-Using a semi-structure data type saves you from needing to add a column for every
-individual country and ending up with rows that have hundreds of sparsely filled columns.
-We have `a blog post
-<https://www.citusdata.com/blog/2016/07/14/choosing-nosql-hstore-json-jsonb/>`_ explaining
-which format to use for your semi-structured data. The post recommends JSONB, here we'll
-demonstrate how to incorporate JSONB columns into your data model.
+Citus与Postgres对非结构化数据类型的内置支持配合得很好。为了证明这一点，让我们跟踪来自每个国家的访客数量。
+使用半结构数据类型可以使您无需为每个国家/地区添加列，并最终获得具有数百个稀疏填充列的行。
+我们有一篇 `一篇博客文章 <https://www.citusdata.com/blog/2016/07/14/choosing-nosql-hstore-json-jsonb/>`_，解释了用于半结构化数据的格式。文章推荐JSONB，这里我们将演示如何将JSONB列合并到您的数据模型中。
 
-First, add the new column to our rollup table:
+首先，将新列添加到汇总表：
 
 .. code-block:: sql
 
   ALTER TABLE http_request_1min ADD COLUMN country_counters JSONB;
 
-Next, include it in the rollups by modifying the rollup function:
+接下来，通过修改汇总函数将其包含在汇总中：
 
 .. code-block:: diff
 
@@ -381,8 +314,7 @@ Next, include it in the rollups by modifying the rollup function:
   +   FROM http_request
   + ) h
 
-Now, if you want to get the number of requests which came from America in your dashboard,
-your can modify the dashboard query to look like this:
+现在，如果你想在你的仪表盘中得到来自美国的请求数量，你可以修改仪表盘查询如下:
 
 .. code-block:: sql
 
