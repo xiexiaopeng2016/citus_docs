@@ -61,7 +61,7 @@ create_reference_table()函数用于定义小型引用或维度表。此函数�
 参数
 ************************
 
-**table_name:** 需要分布的小维度或引用表的名称。
+**table_name:** 需要分布的小维度或参考表的名称。
 
 
 返回值
@@ -71,7 +71,7 @@ N/A
 
 示例
 *************************
-这个示例通知数据库，应该将nation表定义为引用表
+这个示例通知数据库，应该将nation表定义为参考表
 
 .. code-block:: postgresql
 
@@ -81,12 +81,12 @@ upgrade_to_reference_table
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 .. _upgrade_to_reference_table:
 
-upgrade_to_reference_table()函数采用分片数目为1的现有分布式表，并将其升级为可识别的引用表。调用此函数后，该表将如同使用 :ref:`create_reference_table <create_reference_table>` 创建一样。
+upgrade_to_reference_table()函数采用分片数目为1的现有分布式表，并将其升级为可识别的参考表。调用此函数后，该表将如同使用 :ref:`create_reference_table <create_reference_table>` 创建一样。
 
 参数
 ************************
 
-**table_name:** 分布式表的名称（具有分片数目=1），它将作为引用表分布。
+**table_name:** 分布式表的名称（具有分片数目=1），它将作为参考表分布。
 
 返回值
 ********************************
@@ -96,7 +96,7 @@ N/A
 示例
 *************************
 
-这个示例通知数据库，应该将nation表定义为引用表
+这个示例通知数据库，应该将nation表定义为参考表
 
 .. code-block:: postgresql
 
@@ -352,7 +352,7 @@ N/A
 master_add_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-master_add_node()函数在Citus元数据表pg_dist_node中注册集群中添加的新节点。它还将引用表复制到新节点。
+master_add_node()函数在Citus元数据表pg_dist_node中注册集群中添加的新节点。它还将参考表复制到新节点。
 
 参数
 ************************
@@ -416,7 +416,7 @@ N/A
 master_add_inactive_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
- :code:`master_add_inactive_node` 函数类似于 :ref:`master_add_node`，在 :code:`pg_dist_node` 中注册一个新节点。但是，它将新节点标记为非活动状态，这意味着不会在其中放置任何分片。此外，它也*没有*复制引用表到新的节点。
+ :code:`master_add_inactive_node` 函数类似于 :ref:`master_add_node`，在 :code:`pg_dist_node` 中注册一个新节点。但是，它将新节点标记为非活动状态，这意味着不会在其中放置任何分片。此外，它也*没有*复制参考表到新的节点。
 
 参数
 ************************
@@ -450,7 +450,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 master_activate_node
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
- :code:`master_activate_node` 函数将节点在Citus元数据表 :code:`pg_dist_node` 中标记为活动节点，并将引用表复制到节点。对通过master_add_inactive_node添加的节点很有用。
+ :code:`master_activate_node` 函数将节点在Citus元数据表 :code:`pg_dist_node` 中标记为活动节点，并将参考表复制到节点。对通过master_add_inactive_node添加的节点很有用。
 
 参数
 ************************
@@ -645,7 +645,7 @@ master_get_table_metadata()
 get_shard_id_for_distribution_column
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-Citus根据行的分布列的值和表的分布方法将分布式表的每一行分配给分片。在大多数情况下，精确的映射是数据库管理员可以忽略的底层细节。但是，确定行的分片可能很有用，既可用于手动数据库维护任务，也可用于满足好奇心。该 :code:`get_shard_id_for_distribution_column` 函数为hash-和range-分布表以及引用表提供此信息。它不适用于append分布。
+Citus根据行的分布列的值和表的分布方法将分布式表的每一行分配给分片。在大多数情况下，精确的映射是数据库管理员可以忽略的底层细节。但是，确定行的分片可能很有用，既可用于手动数据库维护任务，也可用于满足好奇心。该 :code:`get_shard_id_for_distribution_column` 函数为hash-和range-分布表以及参考表提供此信息。它不适用于append分布。
 
 参数
 ************************

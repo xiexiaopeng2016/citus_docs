@@ -3,7 +3,7 @@
 时间序列数据
 ===============
 
-在时间序列工作负载中，应用程序（例如某些 :ref:`distributing_by_entity_id`）在归档旧信息时查询最新信息。
+在时间序列工作负载中，应用程序(例如某些 :ref:`distributing_by_entity_id`)在归档旧信息时查询最新信息。
 
 为了处理这种工作负载，单节点PostgreSQL数据库通常会使用 `表分区 <https://www.postgresql.org/docs/current/static/ddl-partitioning.html>`_ 将时间排序数据的大表分成多个继承表，每个表包含不同的时间范围。
 
@@ -81,7 +81,7 @@
 
 在上一节中，我们手动创建了 ``github.events`` 表的分区。继续这样做是很繁琐的，特别是当使用较少的分区保存不到一年的数据时。让 `pg_partman 扩展 <https://github.com/keithf4/pg_partman>`_ 按需自动创建分区更令人愉快。pg_partman的核心功能与Citus一起开箱即用，当它与本机分区一起使用时。
 
-首先克隆，构建, 并安装pg_partman扩展。然后告诉partman我们想要创建每个持有一小时数据的分区。这将创建初始空的每小时分区：
+首先克隆，构建，并安装pg_partman扩展。然后告诉partman我们想要创建每个持有一小时数据的分区。这将创建初始空的每小时分区：
 
 .. code-block:: sql
 
@@ -131,7 +131,7 @@
   -- due to aggressive locks
   SELECT partman.run_maintenance(p_analyze := false);
 
-最好设置定时任务来运行维护功能。可以构建Pg_partman以支持后台工作者（BGW）进程来执行此操作。或者我们可以使用另一个扩展，如 `pg_cron <https://github.com/citusdata/pg_cron>`_：
+最好设置定时任务来运行维护功能。可以构建Pg_partman以支持后台工作者(BGW)进程来执行此操作。或者我们可以使用另一个扩展，如 `pg_cron <https://github.com/citusdata/pg_cron>`_：
 
 .. code-block:: postgresql
 

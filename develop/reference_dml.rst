@@ -223,7 +223,7 @@ COPY命令（批量加载)
 
   COMMIT;
 
-这个特性只支持散列分布表和引用表，并且只支持那些 :ref:`replication_factor <replication_factor>` 为1的表。
+这个特性只支持散列分布表和参考表，并且只支持那些 :ref:`replication_factor <replication_factor>` 为1的表。
 
 最大化写入性能
 -------------------
